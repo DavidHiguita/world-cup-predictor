@@ -30,6 +30,10 @@ function buildReviewHref(requestUrl: URL, formData: FormData, error: string) {
   return new URL(`/create-group?${params.toString()}`, requestUrl);
 }
 
+function seeOther(url: string | URL) {
+  return NextResponse.redirect(url, { status: 303 });
+}
+
 export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const formData = await request.formData();
@@ -50,13 +54,13 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth")));
+    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
   if (pendingAccountDeletion) {
-    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth")));
+    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
   }
 
   const parsed = createGroupFormSchema.safeParse({
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "invalid")));
+    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "invalid")));
   }
 
   const values = parsed.data;
@@ -88,7 +92,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     const code = error?.message === "GROUP_DUPLICATE" ? "duplicate" : "generic";
 
-    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, code)));
+    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, code)));
   }
 
   const group = data as CreateGroupRpcResult;
@@ -103,5 +107,5 @@ export async function POST(request: NextRequest) {
   createdParams.set("deadline", group.deadline);
   createdParams.set("maxPlayers", String(group.max_players));
 
-  return copyResponseCookies(response, NextResponse.redirect(new URL(`/groups/${group.slug}?${createdParams.toString()}`, requestUrl)));
+  return copyResponseCookies(response, seeOther(new URL(`/groups/${group.slug}?${createdParams.toString()}`, requestUrl)));
 }

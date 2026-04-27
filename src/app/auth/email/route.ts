@@ -16,6 +16,10 @@ function buildErrorUrl(request: NextRequest, lang: string, code: string, redirec
   return url;
 }
 
+function seeOther(url: string | URL) {
+  return NextResponse.redirect(url, { status: 303 });
+}
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const mode = formData.get("mode");
@@ -36,7 +40,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!email || !password) {
-    return NextResponse.redirect(buildErrorUrl(request, lang, "credentials", redirectTo));
+    return seeOther(buildErrorUrl(request, lang, "credentials", redirectTo));
   }
 
   if (mode === "sign-up") {
@@ -53,18 +57,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.redirect(buildErrorUrl(request, lang, "signup", redirectTo, error.message));
+      return seeOther(buildErrorUrl(request, lang, "signup", redirectTo, error.message));
     }
 
     const redirectUrl = new URL(redirectTo, request.url);
     redirectUrl.searchParams.set("authNotice", "check-email");
-    return NextResponse.redirect(redirectUrl);
+    return seeOther(redirectUrl);
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return NextResponse.redirect(buildErrorUrl(request, lang, "signin", redirectTo, error.message));
+    return seeOther(buildErrorUrl(request, lang, "signin", redirectTo, error.message));
   }
 
   const {
@@ -81,12 +85,12 @@ export async function POST(request: NextRequest) {
       redirectUrl.searchParams.set("error", ACCOUNT_DELETION_PENDING_NOTICE);
       redirectUrl.searchParams.set("authNotice", ACCOUNT_DELETION_PENDING_NOTICE);
       redirectUrl.searchParams.set("redirectTo", redirectTo);
-      const redirectResponse = NextResponse.redirect(redirectUrl);
+      const redirectResponse = seeOther(redirectUrl);
 
       return copyResponseCookies(response, redirectResponse);
     }
   }
 
-  const redirectResponse = NextResponse.redirect(new URL(redirectTo, request.url));
+  const redirectResponse = seeOther(new URL(redirectTo, request.url));
   return copyResponseCookies(response, redirectResponse);
 }
