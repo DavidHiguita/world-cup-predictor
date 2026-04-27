@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { getGroupRankings } from "@/lib/rankings/group-rankings";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -27,20 +28,20 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ status: "auth" }, { status: 401 });
+    return copyResponseCookies(response, NextResponse.json({ status: "auth" }, { status: 401 }));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
   if (pendingAccountDeletion) {
-    return NextResponse.json({ status: "auth" }, { status: 401 });
+    return copyResponseCookies(response, NextResponse.json({ status: "auth" }, { status: 401 }));
   }
 
   const groupId = request.nextUrl.searchParams.get("groupId") ?? "";
   const groupSlug = request.nextUrl.searchParams.get("groupSlug") ?? "";
 
   if (!groupId && !groupSlug) {
-    return NextResponse.json({ status: "invalid" }, { status: 400 });
+    return copyResponseCookies(response, NextResponse.json({ status: "invalid" }, { status: 400 }));
   }
 
   let group: GroupRow | null = null;
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!group) {
-    return NextResponse.json({ status: "invalid" }, { status: 404 });
+    return copyResponseCookies(response, NextResponse.json({ status: "invalid" }, { status: 404 }));
   }
 
   const { data: membershipData } = await supabase
@@ -67,21 +68,24 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (!membershipData) {
-    return NextResponse.json({ status: "forbidden" }, { status: 403 });
+    return copyResponseCookies(response, NextResponse.json({ status: "forbidden" }, { status: 403 }));
   }
 
   try {
     const rankingData = await getGroupRankings(supabase, group.id, user.id);
 
-    return NextResponse.json({
-      status: "ok",
-      rows: rankingData.rows,
-      podium: rankingData.podium,
-      resolvedMatches: rankingData.resolvedMatches,
-      lastUpdated: rankingData.lastUpdated,
-      fetchedAt: new Date().toISOString(),
-    });
+    return copyResponseCookies(
+      response,
+      NextResponse.json({
+        status: "ok",
+        rows: rankingData.rows,
+        podium: rankingData.podium,
+        resolvedMatches: rankingData.resolvedMatches,
+        lastUpdated: rankingData.lastUpdated,
+        fetchedAt: new Date().toISOString(),
+      }),
+    );
   } catch {
-    return NextResponse.json({ status: "error" }, { status: 500 });
+    return copyResponseCookies(response, NextResponse.json({ status: "error" }, { status: 500 }));
   }
 }

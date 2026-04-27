@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
@@ -116,10 +117,10 @@ export async function POST(request: NextRequest) {
 
   const respond = (payload: SaveResponsePayload, status = 200) => {
     if (wantsJson(request)) {
-      return NextResponse.json(payload, { status });
+      return copyResponseCookies(response, NextResponse.json(payload, { status }));
     }
 
-    return NextResponse.redirect(buildRedirectUrl(request, groupSlug || "groups", lang, payload.status, groupId));
+    return copyResponseCookies(response, NextResponse.redirect(buildRedirectUrl(request, groupSlug || "groups", lang, payload.status, groupId)));
   };
 
   if (!user || !groupSlug || !predictionInputs || predictionInputs.length === 0) {

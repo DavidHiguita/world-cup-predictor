@@ -29,14 +29,18 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = AUTH_ROUTE;
     redirectUrl.searchParams.set("redirectTo", `${pathname}${search}`);
-    return NextResponse.redirect(redirectUrl);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+
+    return copyResponseCookies(response, redirectResponse);
   }
 
   if (isAuthRoute(pathname) && session) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = DEFAULT_AUTHENTICATED_REDIRECT;
     redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+
+    return copyResponseCookies(response, redirectResponse);
   }
 
   return response;

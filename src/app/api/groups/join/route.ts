@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
@@ -46,18 +47,21 @@ export async function POST(request: NextRequest) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("lang", lang);
     signInUrl.searchParams.set("redirectTo", returnTo);
-    return NextResponse.redirect(signInUrl);
+    return copyResponseCookies(response, NextResponse.redirect(signInUrl));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
   if (pendingAccountDeletion) {
-    return NextResponse.redirect(
-      buildReturnUrl(request, returnTo, {
-        lang,
-        status: "auth",
-        ...(mode === "groupId" ? { groupId } : {}),
-      }),
+    return copyResponseCookies(
+      response,
+      NextResponse.redirect(
+        buildReturnUrl(request, returnTo, {
+          lang,
+          status: "auth",
+          ...(mode === "groupId" ? { groupId } : {}),
+        }),
+      ),
     );
   }
 
@@ -66,12 +70,15 @@ export async function POST(request: NextRequest) {
   const rpcValue = mode === "shareCode" ? shareCode : groupId;
 
   if (!rpcValue) {
-    return NextResponse.redirect(
-      buildReturnUrl(request, returnTo, {
-        lang,
-        status: "invalid",
-        ...(mode === "groupId" ? { groupId } : {}),
-      }),
+    return copyResponseCookies(
+      response,
+      NextResponse.redirect(
+        buildReturnUrl(request, returnTo, {
+          lang,
+          status: "invalid",
+          ...(mode === "groupId" ? { groupId } : {}),
+        }),
+      ),
     );
   }
 
@@ -92,12 +99,15 @@ export async function POST(request: NextRequest) {
               ? "invalid"
               : "error";
 
-    return NextResponse.redirect(
-      buildReturnUrl(request, returnTo, {
-        lang,
-        status,
-        ...(mode === "groupId" ? { groupId } : {}),
-      }),
+    return copyResponseCookies(
+      response,
+      NextResponse.redirect(
+        buildReturnUrl(request, returnTo, {
+          lang,
+          status,
+          ...(mode === "groupId" ? { groupId } : {}),
+        }),
+      ),
     );
   }
 
@@ -106,5 +116,5 @@ export async function POST(request: NextRequest) {
   redirectUrl.searchParams.set("lang", lang);
   redirectUrl.searchParams.set("groupId", group.group_id);
 
-  return NextResponse.redirect(redirectUrl);
+  return copyResponseCookies(response, NextResponse.redirect(redirectUrl));
 }

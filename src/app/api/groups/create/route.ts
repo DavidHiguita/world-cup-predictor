@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createGroupArtifacts, createGroupFormSchema } from "@/lib/groups/create-group";
+import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
@@ -49,13 +50,13 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth"));
+    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth")));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
   if (pendingAccountDeletion) {
-    return NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth"));
+    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "auth")));
   }
 
   const parsed = createGroupFormSchema.safeParse({
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(buildReviewHref(requestUrl, formData, "invalid"));
+    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, "invalid")));
   }
 
   const values = parsed.data;
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     const code = error?.message === "GROUP_DUPLICATE" ? "duplicate" : "generic";
 
-    return NextResponse.redirect(buildReviewHref(requestUrl, formData, code));
+    return copyResponseCookies(response, NextResponse.redirect(buildReviewHref(requestUrl, formData, code)));
   }
 
   const group = data as CreateGroupRpcResult;
@@ -102,5 +103,5 @@ export async function POST(request: NextRequest) {
   createdParams.set("deadline", group.deadline);
   createdParams.set("maxPlayers", String(group.max_players));
 
-  return NextResponse.redirect(new URL(`/groups/${group.slug}?${createdParams.toString()}`, requestUrl));
+  return copyResponseCookies(response, NextResponse.redirect(new URL(`/groups/${group.slug}?${createdParams.toString()}`, requestUrl)));
 }

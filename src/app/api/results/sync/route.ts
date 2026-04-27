@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { syncLatestResults } from "@/lib/results/sync";
 import { getGroupRankings } from "@/lib/rankings/group-rankings";
@@ -34,13 +35,13 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ status: "auth" }, { status: 401 });
+    return copyResponseCookies(response, NextResponse.json({ status: "auth" }, { status: 401 }));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
   if (pendingAccountDeletion) {
-    return NextResponse.json({ status: "auth" }, { status: 401 });
+    return copyResponseCookies(response, NextResponse.json({ status: "auth" }, { status: 401 }));
   }
 
   const body = (await request.json().catch(() => null)) as SyncRequestBody | null;
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
   const groupSlug = body?.groupSlug ?? "";
 
   if (!groupId && !groupSlug) {
-    return NextResponse.json({ status: "invalid" }, { status: 400 });
+    return copyResponseCookies(response, NextResponse.json({ status: "invalid" }, { status: 400 }));
   }
 
   let group: GroupRow | null = null;
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!group) {
-    return NextResponse.json({ status: "invalid" }, { status: 404 });
+    return copyResponseCookies(response, NextResponse.json({ status: "invalid" }, { status: 404 }));
   }
 
   const { data: membershipData } = await supabase
@@ -75,18 +76,21 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (!membershipData || membershipData.role !== "owner") {
-    return NextResponse.json({ status: "forbidden" }, { status: 403 });
+    return copyResponseCookies(response, NextResponse.json({ status: "forbidden" }, { status: 403 }));
   }
 
   if (!hasSupabaseAdminEnv()) {
-    return NextResponse.json(
-      {
-        status: "unsupported",
-        updatedMatchIds: [],
-        unchangedMatchIds: [],
-        syncedAt: new Date().toISOString(),
-      },
-      { status: 503 },
+    return copyResponseCookies(
+      response,
+      NextResponse.json(
+        {
+          status: "unsupported",
+          updatedMatchIds: [],
+          unchangedMatchIds: [],
+          syncedAt: new Date().toISOString(),
+        },
+        { status: 503 },
+      ),
     );
   }
 
@@ -94,28 +98,34 @@ export async function POST(request: NextRequest) {
     const syncData = await syncLatestResults();
     const rankingData = await getGroupRankings(supabase, group.id, user.id);
 
-    return NextResponse.json({
-      status: syncData.updatedMatchIds.length > 0 ? "synced" : "unchanged",
-      updatedMatchIds: syncData.updatedMatchIds,
-      unchangedMatchIds: syncData.unchangedMatchIds,
-      syncedAt: syncData.syncedAt,
-      rankings: {
-        rows: rankingData.rows,
-        podium: rankingData.podium,
-        resolvedMatches: rankingData.resolvedMatches,
-        lastUpdated: rankingData.lastUpdated,
-        fetchedAt: new Date().toISOString(),
-      },
-    });
+    return copyResponseCookies(
+      response,
+      NextResponse.json({
+        status: syncData.updatedMatchIds.length > 0 ? "synced" : "unchanged",
+        updatedMatchIds: syncData.updatedMatchIds,
+        unchangedMatchIds: syncData.unchangedMatchIds,
+        syncedAt: syncData.syncedAt,
+        rankings: {
+          rows: rankingData.rows,
+          podium: rankingData.podium,
+          resolvedMatches: rankingData.resolvedMatches,
+          lastUpdated: rankingData.lastUpdated,
+          fetchedAt: new Date().toISOString(),
+        },
+      }),
+    );
   } catch {
-    return NextResponse.json(
-      {
-        status: "error",
-        updatedMatchIds: [],
-        unchangedMatchIds: [],
-        syncedAt: new Date().toISOString(),
-      },
-      { status: 500 },
+    return copyResponseCookies(
+      response,
+      NextResponse.json(
+        {
+          status: "error",
+          updatedMatchIds: [],
+          unchangedMatchIds: [],
+          syncedAt: new Date().toISOString(),
+        },
+        { status: 500 },
+      ),
     );
   }
 }

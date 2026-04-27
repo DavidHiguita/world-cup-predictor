@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("lang", lang);
     signInUrl.searchParams.set("redirectTo", `/profile?lang=${lang}&delete=confirm`);
-    return NextResponse.redirect(signInUrl);
+    return copyResponseCookies(response, NextResponse.redirect(signInUrl));
   }
 
   const { error } = await supabase.rpc("request_account_deletion");
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const redirectUrl = new URL("/profile", request.url);
     redirectUrl.searchParams.set("lang", lang);
     redirectUrl.searchParams.set("delete", "error");
-    return NextResponse.redirect(redirectUrl);
+    return copyResponseCookies(response, NextResponse.redirect(redirectUrl));
   }
 
   await supabase.auth.signOut();
