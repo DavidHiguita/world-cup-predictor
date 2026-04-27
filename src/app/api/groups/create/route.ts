@@ -53,14 +53,12 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
-  }
+  if (user) {
+    const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
-  const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
-
-  if (pendingAccountDeletion) {
-    return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
+    if (pendingAccountDeletion) {
+      return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
+    }
   }
 
   const parsed = createGroupFormSchema.safeParse({
@@ -90,7 +88,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (error || !data) {
-    const code = error?.message === "GROUP_DUPLICATE" ? "duplicate" : "generic";
+    const message = error?.message ?? "";
+    const code = message === "GROUP_DUPLICATE" ? "duplicate" : message === "AUTH_REQUIRED" ? "auth" : "generic";
 
     return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, code)));
   }
