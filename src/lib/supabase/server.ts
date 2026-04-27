@@ -32,13 +32,18 @@ export async function createSupabaseServerClient() {
 
 export function createSupabaseRouteHandlerClient(cookieStore: RouteHandlerCookieStore) {
   const env = getSupabasePublicEnv();
+  let currentCookies = cookieStore.getAll();
 
   return createServerClient(env.url, env.anonKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        return currentCookies;
       },
       setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          currentCookies = currentCookies.filter((cookie) => cookie.name !== name);
+          currentCookies.push({ name, value });
+        });
         cookieStore.setAll(cookiesToSet);
       },
     },
