@@ -5,10 +5,6 @@ import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
- function logCreateGroupDebug(stage: string, details: Record<string, unknown>) {
-  console.log("[create-group]", JSON.stringify({ stage, ...details }));
- }
-
 type CreateGroupRpcResult = {
   id: string;
   slug: string;
@@ -42,7 +38,6 @@ export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const formData = await request.formData();
   const response = NextResponse.next();
-  const cookieNames = request.cookies.getAll().map((cookie) => cookie.name);
   const supabase = createSupabaseRouteHandlerClient({
     getAll() {
       return request.cookies.getAll();
@@ -54,32 +49,12 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  logCreateGroupDebug("request", {
-    host: request.headers.get("host"),
-    origin: request.headers.get("origin"),
-    referer: request.headers.get("referer"),
-    cookieNames,
-    supabaseCookieNames: cookieNames.filter((name) => name.startsWith("sb-")),
-  });
-
   const {
-    error: userError,
     data: { user },
   } = await supabase.auth.getUser();
 
-  logCreateGroupDebug("auth", {
-    hasUser: Boolean(user),
-    userId: user?.id ?? null,
-    userError: userError?.message ?? null,
-  });
-
   if (user) {
     const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
-
-    logCreateGroupDebug("pending-deletion", {
-      hasPendingAccountDeletion: Boolean(pendingAccountDeletion),
-      userId: user.id,
-    });
 
     if (pendingAccountDeletion) {
       return copyResponseCookies(response, seeOther(buildReviewHref(requestUrl, formData, "auth")));
@@ -110,13 +85,6 @@ export async function POST(request: NextRequest) {
     group_deadline: values.deadline,
     group_max_players: values.maxPlayers,
     group_scoring_mode: values.scoringMode,
-  });
-
-  logCreateGroupDebug("rpc", {
-    hasData: Boolean(data),
-    error: error?.message ?? null,
-    code: error?.code ?? null,
-    slug: artifacts.slug,
   });
 
   if (error || !data) {

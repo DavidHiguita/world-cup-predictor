@@ -12,8 +12,6 @@ const navItems = [
   { href: "/profile", label: "Profile" },
 ];
 
-const utilityItems = [{ href: "/auth/sign-out", label: "Log out" }];
-
 export function AuthShell({ children }: AuthShellProps) {
   return (
     <div className="app-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8">
@@ -38,15 +36,14 @@ export function AuthShell({ children }: AuthShellProps) {
 
           <div className="mt-8 grid gap-3 border-t border-white/10 pt-6">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Utilities</p>
-            {utilityItems.map((item) => (
-              <Link
-                key={item.href}
-                className="rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-sky-400/40 hover:bg-white/5 hover:text-white"
-                href={item.href}
+            <form action="/auth/sign-out" method="post">
+              <button
+                className="w-full rounded-2xl border border-white/10 px-4 py-3 text-left text-sm font-medium text-slate-200 transition hover:border-sky-400/40 hover:bg-white/5 hover:text-white"
+                type="submit"
               >
-                {item.label}
-              </Link>
-            ))}
+                Log out
+              </button>
+            </form>
             <Link
               className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm font-medium text-rose-100 transition hover:border-rose-300/40 hover:bg-rose-400/15"
               href="/profile?delete=confirm"
