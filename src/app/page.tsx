@@ -1,65 +1,118 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+import { PublicShell } from "@/components/layout/public-shell";
+import { getCommonMessages, resolveLocale } from "@/lib/i18n";
+
+type HomePageProps = {
+  searchParams?: Promise<{
+    lang?: string;
+  }>;
+};
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const params = await searchParams;
+  const locale = resolveLocale(params?.lang);
+  const messages = getCommonMessages(locale);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <PublicShell locale={locale}>
+      <section className="page-grid">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="glass-panel rounded-[2rem] px-6 py-8 sm:px-8 sm:py-10">
+            <p className="section-label">{messages.landing.eyebrow}</p>
+            <h2 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+              {messages.landing.title}
+            </h2>
+            <p className="muted-copy mt-4 max-w-3xl text-base leading-8 sm:text-lg">
+              {messages.landing.description}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                className="rounded-full bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-300"
+                href={`/sign-in?lang=${locale}`}
+              >
+                {messages.landing.primaryCta}
+              </Link>
+              <Link
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-emerald-400/40 hover:bg-white/5"
+                href={`/dashboard?lang=${locale}`}
+              >
+                {messages.landing.secondaryCta}
+              </Link>
+            </div>
+          </div>
+
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+              {messages.landing.heroCardTitle}
+            </p>
+            <div className="mt-4 grid gap-3">
+              {messages.landing.heroCardItems.map((item) => (
+                <div key={item} className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-sm leading-6 text-slate-100 sm:text-base">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </article>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <h3 className="text-2xl font-semibold tracking-tight text-white">
+              {messages.landing.valueTitle}
+            </h3>
+            <p className="muted-copy mt-4 text-base leading-8">
+              {messages.landing.valueDescription}
+            </p>
+            <ul className="muted-copy mt-6 grid gap-3 text-sm leading-7 sm:text-base">
+              {messages.landing.valuePoints.map((point) => (
+                <li key={point} className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+            <h3 className="text-2xl font-semibold tracking-tight text-white">
+              {messages.landing.howItWorksTitle}
+            </h3>
+            <div className="mt-6 grid gap-4">
+              {messages.landing.howItWorksSteps.map((step, index) => (
+                <div key={step.title} className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-400 font-semibold text-slate-950">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-white">{step.title}</h4>
+                      <p className="muted-copy mt-2 text-sm leading-7 sm:text-base">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
         </div>
-      </main>
-    </div>
+
+        <article className="glass-panel rounded-[2rem] p-6 sm:p-8">
+          <h3 className="text-2xl font-semibold tracking-tight text-white">
+            {messages.landing.featureGridTitle}
+          </h3>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {messages.landing.featureGridItems.map((item) => (
+              <div key={item.title} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                <h4 className="text-lg font-semibold text-white">{item.title}</h4>
+                <p className="muted-copy mt-3 text-sm leading-7 sm:text-base">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+    </PublicShell>
   );
 }
