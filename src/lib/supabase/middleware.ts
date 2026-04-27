@@ -36,12 +36,12 @@ export async function updateSession(request: NextRequest) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
   let hasPendingAccountDeletion = false;
 
-  if (session?.user?.id) {
-    const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, session.user.id);
+  if (user?.id) {
+    const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
 
     if (pendingAccountDeletion) {
       hasPendingAccountDeletion = true;
@@ -52,6 +52,6 @@ export async function updateSession(request: NextRequest) {
   return {
     response,
     hasPendingAccountDeletion,
-    session: hasPendingAccountDeletion ? null : session,
+    session: hasPendingAccountDeletion ? null : user,
   };
 }

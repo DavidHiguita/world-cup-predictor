@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import {
   createGroupArtifacts,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/groups/create-group";
 import { resolveCreateGroupSubmitError } from "@/lib/groups/create-group-submit";
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CreateGroupPageProps = {
   searchParams?: Promise<{
@@ -56,6 +58,15 @@ function buildFlowQuery(params: {
 export default async function CreateGroupPage({ searchParams }: CreateGroupPageProps) {
   const params = await searchParams;
   const locale = resolveLocale(params?.lang);
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/sign-in?lang=${locale}&redirectTo=${encodeURIComponent(`/create-group?lang=${locale}`)}`);
+  }
+
   const messages = getCommonMessages(locale);
   const copy = messages.createGroup;
   const step = resolveCreateGroupStep(params?.step);
