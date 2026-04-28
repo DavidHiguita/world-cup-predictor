@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { formatFixtureKickoff, type PredictionFixture } from "@/lib/predictions/fixtures";
+
+type ScoreField = "homeScore" | "awayScore";
+
+export type PredictionScoreValue = {
+  homeScore: string;
+  awayScore: string;
+};
 
 export type PredictionMatchCardCopy = {
   summaryTitle: string;
@@ -17,12 +22,10 @@ export type PredictionMatchCardCopy = {
   windowLabel: string;
   windowOpen: string;
   windowClosed: string;
+  homeScoreInputLabel: string;
+  awayScoreInputLabel: string;
   openBadge: string;
   closedBadge: string;
-  pickHome: string;
-  pickAway: string;
-  savePick: string;
-  savingPick: string;
   saveAllPicks: string;
   savingAllPicks: string;
   resetChanges: string;
@@ -35,6 +38,8 @@ export type PredictionMatchCardCopy = {
   unsavedState: string;
   updatePick: string;
   lockedPick: string;
+  incompleteScore: string;
+  scoreSeparator: string;
   notices: {
     saved: string;
     partial: string;
@@ -47,29 +52,31 @@ export type PredictionMatchCardCopy = {
 type PredictionMatchCardProps = {
   fixture: PredictionFixture;
   locale: string;
-  onSelect: (winnerCode: string) => void;
-  savedWinnerCode: string;
-  selectedWinnerCode: string;
+  onChange: (field: ScoreField, value: string) => void;
+  savedPrediction: PredictionScoreValue;
+  selectedPrediction: PredictionScoreValue;
   status: "open" | "closed";
+  isSaving: boolean;
   copy: PredictionMatchCardCopy;
 };
 
-export function PredictionMatchCard({ fixture, locale, onSelect, savedWinnerCode, selectedWinnerCode, status, copy }: PredictionMatchCardProps) {
-  const predictedTeam = useMemo(() => {
-    const winnerCode = savedWinnerCode || selectedWinnerCode;
-    if (winnerCode === fixture.homeTeamCode) {
-      return fixture.homeTeamName;
-    }
-    if (winnerCode === fixture.awayTeamCode) {
-      return fixture.awayTeamName;
-    }
+function isComplete(prediction: PredictionScoreValue) {
+  return prediction.homeScore !== "" && prediction.awayScore !== "";
+}
+
+function formatScore(prediction: PredictionScoreValue, separator: string) {
+  if (!isComplete(prediction)) {
     return null;
-  }, [fixture.awayTeamCode, fixture.awayTeamName, fixture.homeTeamCode, fixture.homeTeamName, savedWinnerCode, selectedWinnerCode]);
+  }
 
-  const isDirty = selectedWinnerCode !== savedWinnerCode;
+  return `${prediction.homeScore} ${separator} ${prediction.awayScore}`;
+}
 
-  const homeSelected = selectedWinnerCode === fixture.homeTeamCode;
-  const awaySelected = selectedWinnerCode === fixture.awayTeamCode;
+export function PredictionMatchCard({ fixture, locale, onChange, savedPrediction, selectedPrediction, status, isSaving, copy }: PredictionMatchCardProps) {
+  const isDirty = selectedPrediction.homeScore !== savedPrediction.homeScore || selectedPrediction.awayScore !== savedPrediction.awayScore;
+  const currentScore = formatScore(selectedPrediction, copy.scoreSeparator) ?? formatScore(savedPrediction, copy.scoreSeparator);
+  const hasSavedScore = isComplete(savedPrediction);
+  const isSelectionComplete = isComplete(selectedPrediction);
 
   return (
     <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
@@ -99,7 +106,7 @@ export function PredictionMatchCard({ fixture, locale, onSelect, savedWinnerCode
         </div>
         <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">
           <p className="text-sm font-medium text-amber-300">{copy.yourPickLabel}</p>
-          <p className="mt-2 text-sm leading-6">{predictedTeam ?? copy.noPickYet}</p>
+          <p className="mt-2 text-sm leading-6">{currentScore ?? (selectedPrediction.homeScore || selectedPrediction.awayScore ? copy.incompleteScore : copy.noPickYet)}</p>
         </div>
         <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">
           <p className="text-sm font-medium text-emerald-300">{copy.windowLabel}</p>
@@ -108,34 +115,46 @@ export function PredictionMatchCard({ fixture, locale, onSelect, savedWinnerCode
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <button
-          className={`rounded-[1.25rem] border px-5 py-4 text-left text-sm font-semibold transition ${homeSelected ? "border-emerald-400 bg-emerald-400/15 text-emerald-50" : "border-white/10 text-white hover:border-white/30 hover:bg-white/5"}`}
-          disabled={status !== "open"}
-          onClick={() => onSelect(fixture.homeTeamCode)}
-          type="button"
-        >
-          {copy.pickHome}
-        </button>
-        <button
-          className={`rounded-[1.25rem] border px-5 py-4 text-left text-sm font-semibold transition ${awaySelected ? "border-emerald-400 bg-emerald-400/15 text-emerald-50" : "border-white/10 text-white hover:border-white/30 hover:bg-white/5"}`}
-          disabled={status !== "open"}
-          onClick={() => onSelect(fixture.awayTeamCode)}
-          type="button"
-        >
-          {copy.pickAway}
-        </button>
+        <label className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white">
+          <span className="block text-sm font-medium text-sky-300">{copy.homeScoreInputLabel}</span>
+          <input
+            className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400/50 disabled:cursor-not-allowed disabled:text-slate-400"
+            disabled={status !== "open" || isSaving}
+            inputMode="numeric"
+            max="99"
+            min="0"
+            onChange={(event) => onChange("homeScore", event.target.value.replace(/[^\d]/g, "").slice(0, 2))}
+            placeholder="0"
+            type="number"
+            value={selectedPrediction.homeScore}
+          />
+        </label>
+        <label className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white">
+          <span className="block text-sm font-medium text-sky-300">{copy.awayScoreInputLabel}</span>
+          <input
+            className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400/50 disabled:cursor-not-allowed disabled:text-slate-400"
+            disabled={status !== "open" || isSaving}
+            inputMode="numeric"
+            max="99"
+            min="0"
+            onChange={(event) => onChange("awayScore", event.target.value.replace(/[^\d]/g, "").slice(0, 2))}
+            placeholder="0"
+            type="number"
+            value={selectedPrediction.awayScore}
+          />
+        </label>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {status === "open" ? (
           <>
-            <p className="muted-copy text-sm leading-6">{isDirty ? copy.pendingChanges : savedWinnerCode ? copy.updatePick : copy.selectionHint}</p>
-            {savedWinnerCode && !isDirty ? (
+            <p className="muted-copy text-sm leading-6">{isDirty ? copy.pendingChanges : hasSavedScore ? copy.updatePick : copy.selectionHint}</p>
+            {hasSavedScore && !isDirty ? (
               <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">
                 {copy.savedState}
               </span>
             ) : null}
-            {isDirty ? (
+            {isDirty && isSelectionComplete ? (
               <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100">
                 {copy.unsavedState}
               </span>

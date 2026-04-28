@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createGroupArtifacts, createGroupFormSchema } from "@/lib/groups/create-group";
+import { createGroupArtifacts, createGroupFormSchema, DEFAULT_GROUP_RULES, EXACT_SCORE_SCORING_MODE } from "@/lib/groups/create-group";
+import { seeOther } from "@/lib/http/redirects";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -28,10 +29,6 @@ function buildReviewHref(requestUrl: URL, formData: FormData, error: string) {
   params.set("error", error);
 
   return new URL(`/create-group?${params.toString()}`, requestUrl);
-}
-
-function seeOther(url: string | URL) {
-  return NextResponse.redirect(url, { status: 303 });
 }
 
 export async function POST(request: NextRequest) {
@@ -63,10 +60,10 @@ export async function POST(request: NextRequest) {
 
   const parsed = createGroupFormSchema.safeParse({
     name: formData.get("name"),
-    rules: formData.get("rules"),
+    rules: DEFAULT_GROUP_RULES,
     deadline: formData.get("deadline"),
     maxPlayers: formData.get("maxPlayers"),
-    scoringMode: formData.get("scoringMode") ?? "winner_only",
+    scoringMode: EXACT_SCORE_SCORING_MODE,
   });
 
   if (!parsed.success) {

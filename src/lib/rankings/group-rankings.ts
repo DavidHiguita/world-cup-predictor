@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/admin";
+import { getPredictionPoints, isExactScoreHit } from "@/lib/predictions/scoring";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -43,12 +44,16 @@ type GroupMembershipRow = {
 type PredictionRow = {
   user_id: string;
   match_id: string;
-  predicted_winner_code: string;
+  predicted_home_score: number | null;
+  predicted_away_score: number | null;
 };
 
 type ResolvedMatchRow = {
   id: string;
-  result_winner_code: string | null;
+  home_team_code: string;
+  away_team_code: string;
+  home_score: number | null;
+  away_score: number | null;
   resolved_at: string | null;
 };
 
@@ -79,7 +84,7 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
   const admin = createSupabaseAdminClient();
   const [{ data: membershipsData, error: membershipsError }, { data: resolvedMatchesData, error: matchesError }] = await Promise.all([
     admin.from("group_memberships").select("user_id, role").eq("group_id", groupId),
-    admin.from("matches").select("id, result_winner_code, resolved_at").eq("result_status", "final").not("result_winner_code", "is", null),
+    admin.from("matches").select("id, home_team_code, away_team_code, home_score, away_score, resolved_at").eq("result_status", "final").not("home_score", "is", null).not("away_score", "is", null),
   ]);
 
   if (membershipsError) {
@@ -93,9 +98,7 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
   const memberships = (membershipsData as GroupMembershipRow[] | null) ?? [];
   const resolvedMatches = (resolvedMatchesData as ResolvedMatchRow[] | null) ?? [];
   const resolvedMatchIds = resolvedMatches.map((match) => match.id);
-  const resolvedMatchWinners = new Map(
-    resolvedMatches.map((match) => [match.id, match.result_winner_code ?? ""]),
-  );
+  const resolvedMatchesById = new Map(resolvedMatches.map((match) => [match.id, match]));
   const lastUpdated = resolvedMatches.reduce<string | null>((latest, match) => {
     if (!match.resolved_at) {
       return latest;
@@ -111,7 +114,7 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
   const { data: predictionsData, error: predictionsError } = resolvedMatchIds.length
     ? await admin
         .from("predictions")
-        .select("user_id, match_id, predicted_winner_code")
+        .select("user_id, match_id, predicted_home_score, predicted_away_score")
         .eq("group_id", groupId)
         .in("match_id", resolvedMatchIds)
     : { data: [], error: null };
@@ -135,11 +138,42 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
     let correctPicks = 0;
 
     for (const prediction of userPredictions) {
-      const winnerCode = resolvedMatchWinners.get(prediction.match_id);
+      const resolvedMatch = resolvedMatchesById.get(prediction.match_id);
 
-      if (winnerCode && prediction.predicted_winner_code === winnerCode) {
-        totalPoints += 3;
-        correctPicks += 1;
+      if (
+        resolvedMatch &&
+        resolvedMatch.home_score !== null &&
+        resolvedMatch.away_score !== null &&
+        prediction.predicted_home_score !== null &&
+        prediction.predicted_away_score !== null
+      ) {
+        totalPoints += getPredictionPoints(
+          {
+            homeScore: prediction.predicted_home_score,
+            awayScore: prediction.predicted_away_score,
+          },
+          {
+            homeScore: resolvedMatch.home_score,
+            awayScore: resolvedMatch.away_score,
+          },
+          resolvedMatch.home_team_code,
+          resolvedMatch.away_team_code,
+        );
+
+        if (
+          isExactScoreHit(
+            {
+              homeScore: prediction.predicted_home_score,
+              awayScore: prediction.predicted_away_score,
+            },
+            {
+              homeScore: resolvedMatch.home_score,
+              awayScore: resolvedMatch.away_score,
+            },
+          )
+        ) {
+          correctPicks += 1;
+        }
       }
     }
 

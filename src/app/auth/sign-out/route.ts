@@ -1,9 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 
+import { seeOther } from "@/lib/http/redirects";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = seeOther(new URL("/", request.url));
 
   const supabase = createSupabaseRouteHandlerClient({
     getAll() {

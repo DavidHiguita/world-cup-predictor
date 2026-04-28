@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getOutcomeCode } from "@/lib/predictions/scoring";
 
 type MatchResultRow = {
   id: string;
@@ -17,7 +18,6 @@ type ResultSnapshot = {
   kickoffAt: string;
   homeScore: number;
   awayScore: number;
-  winnerCode: string;
   resolvedAt: string;
 };
 
@@ -43,7 +43,6 @@ function buildSnapshots(): ResultSnapshot[] {
       kickoffAt: "2026-06-12T18:00:00+00:00",
       homeScore: 2,
       awayScore: 1,
-      winnerCode: "MEX",
       resolvedAt: "2026-06-12T20:05:00+00:00",
     },
     {
@@ -52,7 +51,6 @@ function buildSnapshots(): ResultSnapshot[] {
       kickoffAt: "2026-06-12T21:00:00+00:00",
       homeScore: 1,
       awayScore: 2,
-      winnerCode: "GHA",
       resolvedAt: "2026-06-12T23:05:00+00:00",
     },
     {
@@ -61,7 +59,6 @@ function buildSnapshots(): ResultSnapshot[] {
       kickoffAt: "2026-06-13T18:00:00+00:00",
       homeScore: 3,
       awayScore: 2,
-      winnerCode: "ARG",
       resolvedAt: "2026-06-13T20:10:00+00:00",
     },
   ];
@@ -88,6 +85,7 @@ export async function syncLatestResults(): Promise<ResultSyncResult> {
   for (const snapshot of buildSnapshots()) {
     const key = `${snapshot.homeTeamCode}:${snapshot.awayTeamCode}:${snapshot.kickoffAt}`;
     const match = matchesByKey.get(key);
+    const winnerCode = getOutcomeCode(snapshot.homeScore, snapshot.awayScore, snapshot.homeTeamCode, snapshot.awayTeamCode);
 
     if (!match) {
       unchangedMatchIds.push(key);
@@ -96,7 +94,7 @@ export async function syncLatestResults(): Promise<ResultSyncResult> {
 
     const alreadySynced =
       match.result_status === "final" &&
-      match.result_winner_code === snapshot.winnerCode &&
+      match.result_winner_code === winnerCode &&
       match.home_score === snapshot.homeScore &&
       match.away_score === snapshot.awayScore;
 
@@ -108,7 +106,7 @@ export async function syncLatestResults(): Promise<ResultSyncResult> {
     const updateValues: MatchResultUpdate = {
       home_score: snapshot.homeScore,
       away_score: snapshot.awayScore,
-      result_winner_code: snapshot.winnerCode,
+      result_winner_code: winnerCode,
       result_status: "final",
       resolved_at: snapshot.resolvedAt,
     };

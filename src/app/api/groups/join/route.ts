@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getSafeRedirectPath, seeOther } from "@/lib/http/redirects";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ type GroupRow = {
 };
 
 function buildReturnUrl(request: NextRequest, returnTo: string, params: Record<string, string>) {
-  const url = new URL(returnTo || "/join-group", request.url);
+  const url = new URL(getSafeRedirectPath(returnTo, "/join-group", request.url), request.url);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value) {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
   const mode = formData.get("joinMode") === "shareCode" ? "shareCode" : "groupId";
   const groupId = String(formData.get("groupId") ?? "").trim();
   const shareCode = String(formData.get("shareCode") ?? "").trim();
-  const returnTo = String(formData.get("returnTo") ?? (mode === "shareCode" ? `/invite/${shareCode}` : "/join-group"));
+  const returnTo = getSafeRedirectPath(String(formData.get("returnTo") ?? (mode === "shareCode" ? `/invite/${shareCode}` : "/join-group")), mode === "shareCode" ? `/invite/${shareCode}` : "/join-group", request.url);
   const response = NextResponse.next();
   const supabase = createSupabaseRouteHandlerClient({
     getAll() {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("lang", lang);
     signInUrl.searchParams.set("redirectTo", returnTo);
-    return copyResponseCookies(response, NextResponse.redirect(signInUrl));
+    return copyResponseCookies(response, seeOther(signInUrl));
   }
 
   const pendingAccountDeletion = await getPendingAccountDeletionRequest(supabase, user.id);
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   if (pendingAccountDeletion) {
     return copyResponseCookies(
       response,
-      NextResponse.redirect(
+      seeOther(
         buildReturnUrl(request, returnTo, {
           lang,
           status: "auth",
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
   if (!rpcValue) {
     return copyResponseCookies(
       response,
-      NextResponse.redirect(
+      seeOther(
         buildReturnUrl(request, returnTo, {
           lang,
           status: "invalid",
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return copyResponseCookies(
       response,
-      NextResponse.redirect(
+      seeOther(
         buildReturnUrl(request, returnTo, {
           lang,
           status,
@@ -116,5 +117,5 @@ export async function POST(request: NextRequest) {
   redirectUrl.searchParams.set("lang", lang);
   redirectUrl.searchParams.set("groupId", group.group_id);
 
-  return copyResponseCookies(response, NextResponse.redirect(redirectUrl));
+  return copyResponseCookies(response, seeOther(redirectUrl));
 }

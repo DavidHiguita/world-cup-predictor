@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { DEFAULT_AUTHENTICATED_REDIRECT } from "@/lib/auth/routes";
+import { buildSafeRedirectUrl, getSafeRedirectPath, seeOther } from "@/lib/http/redirects";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { ACCOUNT_DELETION_PENDING_NOTICE, getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -16,17 +17,13 @@ function buildErrorUrl(request: NextRequest, lang: string, code: string, redirec
   return url;
 }
 
-function seeOther(url: string | URL) {
-  return NextResponse.redirect(url, { status: 303 });
-}
-
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const mode = formData.get("mode");
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const lang = String(formData.get("lang") ?? "en");
-  const redirectTo = String(formData.get("redirectTo") ?? DEFAULT_AUTHENTICATED_REDIRECT);
+  const redirectTo = getSafeRedirectPath(String(formData.get("redirectTo") ?? DEFAULT_AUTHENTICATED_REDIRECT), DEFAULT_AUTHENTICATED_REDIRECT, request.url);
   const response = NextResponse.next();
   const supabase = createSupabaseRouteHandlerClient({
     getAll() {
@@ -60,7 +57,7 @@ export async function POST(request: NextRequest) {
       return seeOther(buildErrorUrl(request, lang, "signup", redirectTo, error.message));
     }
 
-    const redirectUrl = new URL(redirectTo, request.url);
+    const redirectUrl = buildSafeRedirectUrl(request.url, redirectTo, DEFAULT_AUTHENTICATED_REDIRECT);
     redirectUrl.searchParams.set("authNotice", "check-email");
     return seeOther(redirectUrl);
   }
@@ -91,6 +88,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const redirectResponse = seeOther(new URL(redirectTo, request.url));
+  const redirectResponse = seeOther(buildSafeRedirectUrl(request.url, redirectTo, DEFAULT_AUTHENTICATED_REDIRECT));
   return copyResponseCookies(response, redirectResponse);
 }

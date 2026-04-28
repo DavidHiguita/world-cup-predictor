@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PublicShell } from "@/components/layout/public-shell";
 import { DEFAULT_AUTHENTICATED_REDIRECT } from "@/lib/auth/routes";
+import { getSafeRedirectPath } from "@/lib/http/redirects";
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
 import { ACCOUNT_DELETION_PENDING_NOTICE } from "@/lib/profile/account-deletion";
 
@@ -19,7 +20,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
   const locale = resolveLocale(params?.lang);
   const messages = getCommonMessages(locale);
-  const redirectTo = params?.redirectTo ?? DEFAULT_AUTHENTICATED_REDIRECT;
+  const redirectTo = getSafeRedirectPath(params?.redirectTo, DEFAULT_AUTHENTICATED_REDIRECT);
   const errorMessage =
     params?.error === "credentials"
       ? locale === "es"
@@ -35,8 +36,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             : "We could not create the account. Check the email or try a different password."
           : params?.error === "google"
             ? locale === "es"
-              ? "Google Sign-In no está listo todavía en Supabase."
-              : "Google Sign-In is not ready in Supabase yet."
+              ? "No pudimos entrar con Google. Revisa la configuración o intenta de nuevo."
+              : "We could not sign you in with Google. Check the setup or try again."
             : params?.error === ACCOUNT_DELETION_PENDING_NOTICE
               ? locale === "es"
                 ? "Esta cuenta tiene una eliminación pendiente y ya no puede acceder a la aplicación."

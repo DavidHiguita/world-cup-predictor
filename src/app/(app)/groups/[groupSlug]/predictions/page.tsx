@@ -40,10 +40,11 @@ type MatchRow = {
 
 type PredictionRow = {
   match_id: string;
-  predicted_winner_code: string;
+  predicted_home_score: number | null;
+  predicted_away_score: number | null;
 };
 
-function mapMatchRow(match: MatchRow, predictionsByMatchId: Map<string, string>): PredictionFixture {
+function mapMatchRow(match: MatchRow, predictionsByMatchId: Map<string, PredictionRow>): PredictionFixture {
   return {
     id: match.id,
     stage: match.stage,
@@ -55,7 +56,8 @@ function mapMatchRow(match: MatchRow, predictionsByMatchId: Map<string, string>)
     awayTeamName: match.away_team_name,
     awayTeamFlag: match.away_team_flag,
     venue: match.venue,
-    predictedWinnerCode: predictionsByMatchId.get(match.id) ?? null,
+    predictedHomeScore: predictionsByMatchId.get(match.id)?.predicted_home_score ?? null,
+    predictedAwayScore: predictionsByMatchId.get(match.id)?.predicted_away_score ?? null,
   };
 }
 
@@ -76,13 +78,13 @@ export default async function GroupPredictionsPage({ params, searchParams }: Pre
       ? copy.notices.saved
       : query?.status === "partial"
         ? copy.notices.partial
-      : query?.status === "closed"
-        ? copy.notices.closed
-        : query?.status === "invalid"
-          ? copy.notices.invalid
-          : query?.status === "error"
-            ? copy.notices.error
-            : null;
+        : query?.status === "closed"
+          ? copy.notices.closed
+          : query?.status === "invalid"
+            ? copy.notices.invalid
+            : query?.status === "error"
+              ? copy.notices.error
+              : null;
 
   let group: GroupRow | null = null;
   let fixtures: PredictionFixture[] = [];
@@ -113,11 +115,11 @@ export default async function GroupPredictionsPage({ params, searchParams }: Pre
   if (group) {
     const [{ data: matchesData }, { data: predictionsData }] = await Promise.all([
       supabase.from("matches").select("id, stage, kickoff_at, home_team_code, home_team_name, home_team_flag, away_team_code, away_team_name, away_team_flag, venue").order("kickoff_at", { ascending: true }),
-      supabase.from("predictions").select("match_id, predicted_winner_code").eq("group_id", group.id).eq("user_id", user.id),
+      supabase.from("predictions").select("match_id, predicted_home_score, predicted_away_score").eq("group_id", group.id).eq("user_id", user.id),
     ]);
 
     const predictionsByMatchId = new Map(
-      ((predictionsData as PredictionRow[] | null) ?? []).map((prediction) => [prediction.match_id, prediction.predicted_winner_code]),
+      ((predictionsData as PredictionRow[] | null) ?? []).map((prediction) => [prediction.match_id, prediction]),
     );
 
     if ((matchesData as MatchRow[] | null)?.length) {
@@ -130,7 +132,7 @@ export default async function GroupPredictionsPage({ params, searchParams }: Pre
   const groupName = group?.name ?? routeParams.groupSlug;
   const groupDeadline = group?.deadline ?? new Date().toISOString();
   const openCount = fixtures.filter((fixture) => getFixtureStatus(fixture.kickoffAt, groupDeadline) === "open").length;
-  const savedCount = fixtures.filter((fixture) => fixture.predictedWinnerCode).length;
+  const savedCount = fixtures.filter((fixture) => fixture.predictedHomeScore !== null && fixture.predictedAwayScore !== null).length;
 
   return (
     <section className="page-grid">

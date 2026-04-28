@@ -69,12 +69,11 @@ export default async function GroupDetailsPage({ params, searchParams }: GroupDe
     redirect(`/groups?lang=${locale}`);
   }
 
-  const { count } = await supabase
-    .from("group_memberships")
-    .select("id", { count: "exact", head: true })
-    .eq("group_id", group.id);
+  const { data: memberCountData } = await supabase.rpc("get_group_member_count", {
+    target_group_uuid: group.id,
+  });
 
-  memberCount = count ?? (created ? 1 : 0);
+  memberCount = typeof memberCountData === "number" ? memberCountData : created ? 1 : 0;
 
   const groupName = group.name ?? (query?.name ? decodeURIComponent(query.name) : routeParams.groupSlug);
   const groupId = group.group_id;
@@ -135,17 +134,14 @@ export default async function GroupDetailsPage({ params, searchParams }: GroupDe
           <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
             <h2 className="text-xl font-semibold text-white">{copy.nextActionsTitle}</h2>
             <div className="mt-4 grid gap-3">
-              <Link className="rounded-[1.25rem] bg-sky-400 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-300" href={`/groups?lang=${locale}`}>
-                {copy.backToGroups}
-              </Link>
-              <Link className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/dashboard?lang=${locale}`}>
-                {copy.openDashboard}
-              </Link>
-              <Link className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={predictionsHref}>
+              <Link className="rounded-[1.25rem] bg-sky-400 px-5 py-4 text-sm font-semibold text-slate-950 transition hover:bg-sky-300" href={predictionsHref}>
                 {copy.openPredictions}
               </Link>
               <Link className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={rankingsHref}>
                 {copy.openRankings}
+              </Link>
+              <Link className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/groups?lang=${locale}`}>
+                {copy.backToGroups}
               </Link>
               <Link className="rounded-[1.25rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?lang=${locale}`}>
                 {copy.createAnotherGroup}

@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { seeOther } from "@/lib/http/redirects";
+import { getOutcomeCode, parseScoreInput } from "@/lib/predictions/scoring";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -20,7 +22,8 @@ function buildRedirectUrl(request: NextRequest, groupSlug: string, lang: string,
 
 type PredictionInput = {
   matchId: string;
-  predictedWinnerCode: string;
+  homeScore: number;
+  awayScore: number;
 };
 
 type SaveResponsePayload = {
@@ -46,15 +49,17 @@ function parsePredictionInputs(formData: FormData) {
         }
 
         const matchId = "matchId" in item ? String(item.matchId ?? "") : "";
-        const predictedWinnerCode = "predictedWinnerCode" in item ? String(item.predictedWinnerCode ?? "") : "";
+        const homeScore = parseScoreInput("homeScore" in item ? String(item.homeScore ?? "") : "");
+        const awayScore = parseScoreInput("awayScore" in item ? String(item.awayScore ?? "") : "");
 
-        if (!matchId || !predictedWinnerCode) {
+        if (!matchId || homeScore === null || awayScore === null) {
           return null;
         }
 
         return {
           matchId,
-          predictedWinnerCode,
+          homeScore,
+          awayScore,
         } satisfies PredictionInput;
       });
 
@@ -65,16 +70,18 @@ function parsePredictionInputs(formData: FormData) {
   }
 
   const matchId = String(formData.get("matchId") ?? "");
-  const predictedWinnerCode = String(formData.get("predictedWinnerCode") ?? "");
+  const homeScore = parseScoreInput(formData.get("homeScore"));
+  const awayScore = parseScoreInput(formData.get("awayScore"));
 
-  if (!matchId || !predictedWinnerCode) {
+  if (!matchId || homeScore === null || awayScore === null) {
     return [];
   }
 
   return [
     {
       matchId,
-      predictedWinnerCode,
+      homeScore,
+      awayScore,
     },
   ] satisfies PredictionInput[];
 }
@@ -120,7 +127,7 @@ export async function POST(request: NextRequest) {
       return copyResponseCookies(response, NextResponse.json(payload, { status }));
     }
 
-    return copyResponseCookies(response, NextResponse.redirect(buildRedirectUrl(request, groupSlug || "groups", lang, payload.status, groupId)));
+    return copyResponseCookies(response, seeOther(buildRedirectUrl(request, groupSlug || "groups", lang, payload.status, groupId)));
   };
 
   if (!user || !groupSlug || !predictionInputs || predictionInputs.length === 0) {
@@ -162,7 +169,7 @@ export async function POST(request: NextRequest) {
   const upserts = dedupedInputs.map((input) => {
     const match = matchesById.get(input.matchId);
 
-    if (!match || ![match.home_team_code, match.away_team_code].includes(input.predictedWinnerCode)) {
+    if (!match) {
       return null;
     }
 
@@ -179,7 +186,9 @@ export async function POST(request: NextRequest) {
       group_id: group.id,
       match_id: match.id,
       user_id: user.id,
-      predicted_winner_code: input.predictedWinnerCode,
+      predicted_home_score: input.homeScore,
+      predicted_away_score: input.awayScore,
+      predicted_winner_code: getOutcomeCode(input.homeScore, input.awayScore, match.home_team_code, match.away_team_code),
       updated_at: new Date().toISOString(),
     };
   });

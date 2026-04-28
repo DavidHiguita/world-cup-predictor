@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { seeOther } from "@/lib/http/redirects";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { ACCOUNT_DELETION_PENDING_NOTICE } from "@/lib/profile/account-deletion";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("lang", lang);
     signInUrl.searchParams.set("redirectTo", `/profile?lang=${lang}&delete=confirm`);
-    return copyResponseCookies(response, NextResponse.redirect(signInUrl));
+    return copyResponseCookies(response, seeOther(signInUrl));
   }
 
   const { error } = await supabase.rpc("request_account_deletion");
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const redirectUrl = new URL("/profile", request.url);
     redirectUrl.searchParams.set("lang", lang);
     redirectUrl.searchParams.set("delete", "error");
-    return copyResponseCookies(response, NextResponse.redirect(redirectUrl));
+    return copyResponseCookies(response, seeOther(redirectUrl));
   }
 
   await supabase.auth.signOut();
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
   redirectUrl.searchParams.set("error", ACCOUNT_DELETION_PENDING_NOTICE);
   redirectUrl.searchParams.set("authNotice", ACCOUNT_DELETION_PENDING_NOTICE);
   redirectUrl.searchParams.set("redirectTo", "/sign-in");
-  const redirectResponse = NextResponse.redirect(redirectUrl);
+  const redirectResponse = seeOther(redirectUrl);
 
   return copyResponseCookies(response, redirectResponse);
 }

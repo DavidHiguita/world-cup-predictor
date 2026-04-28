@@ -1,25 +1,28 @@
 import { z } from "zod";
 
-export const createGroupSteps = ["basics", "timing", "limits", "review"] as const;
+export const EXACT_SCORE_SCORING_MODE = "exact_score" as const;
+export const DEFAULT_GROUP_RULES = "Exact score predictions · Exact score = 3 points · Correct outcome = 1 point.";
+
+export const createGroupSteps = ["setup", "review"] as const;
 
 export type CreateGroupStep = (typeof createGroupSteps)[number];
 
 export const createGroupFormSchema = z.object({
   name: z.string().trim().min(3).max(50),
-  rules: z.string().trim().min(10).max(200),
+  rules: z.string().trim().min(10).max(200).default(DEFAULT_GROUP_RULES),
   deadline: z.string().min(1),
   maxPlayers: z.coerce.number().int().min(4).max(200),
-  scoringMode: z.literal("winner_only"),
+  scoringMode: z.literal(EXACT_SCORE_SCORING_MODE).default(EXACT_SCORE_SCORING_MODE),
 });
 
 export type CreateGroupFormValues = z.infer<typeof createGroupFormSchema>;
 
 export const defaultCreateGroupValues: CreateGroupFormValues = {
   name: "",
-  rules: "Correct winner = 3 points. No exact-score picks.",
+  rules: DEFAULT_GROUP_RULES,
   deadline: "2026-06-11T18:00",
   maxPlayers: 24,
-  scoringMode: "winner_only",
+  scoringMode: EXACT_SCORE_SCORING_MODE,
 };
 
 export function resolveCreateGroupStep(value: string | null | undefined): CreateGroupStep {
@@ -27,7 +30,7 @@ export function resolveCreateGroupStep(value: string | null | undefined): Create
     return value as CreateGroupStep;
   }
 
-  return "basics";
+  return "setup";
 }
 
 export function getCreateGroupStepIndex(step: CreateGroupStep) {
@@ -37,10 +40,10 @@ export function getCreateGroupStepIndex(step: CreateGroupStep) {
 export function getCreateGroupValuesFromSearchParams(searchParams: Record<string, string | undefined>): CreateGroupFormValues {
   return {
     name: searchParams.name ?? defaultCreateGroupValues.name,
-    rules: searchParams.rules ?? defaultCreateGroupValues.rules,
+    rules: DEFAULT_GROUP_RULES,
     deadline: searchParams.deadline ?? defaultCreateGroupValues.deadline,
     maxPlayers: Number(searchParams.maxPlayers ?? defaultCreateGroupValues.maxPlayers),
-    scoringMode: "winner_only",
+    scoringMode: EXACT_SCORE_SCORING_MODE,
   };
 }
 

@@ -151,9 +151,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
             <h2 className="text-xl font-semibold text-white">Account actions</h2>
             <div className="mt-4 grid gap-3">
-              <Link className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href="/auth/sign-out">
-                {copy.logout}
-              </Link>
+              <form action="/auth/sign-out" className="contents" method="post">
+                <button className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-left text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" type="submit">
+                  {copy.logout}
+                </button>
+              </form>
               <Link className="rounded-[1.25rem] border border-rose-400/20 bg-rose-400/10 px-4 py-4 text-sm font-semibold text-rose-100 transition hover:border-rose-300/40 hover:bg-rose-400/15" href={`/profile?lang=${locale}&delete=confirm`}>
                 {copy.reviewDelete}
               </Link>

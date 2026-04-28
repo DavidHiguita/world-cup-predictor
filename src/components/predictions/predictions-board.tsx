@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { getFixtureStatus, type PredictionFixture } from "@/lib/predictions/fixtures";
 
-import { PredictionMatchCard, type PredictionMatchCardCopy } from "./prediction-match-card";
+import { PredictionMatchCard, type PredictionMatchCardCopy, type PredictionScoreValue } from "./prediction-match-card";
 
 type PredictionsBoardProps = {
   fixtures: PredictionFixture[];
@@ -26,13 +26,24 @@ type FixtureWithStatus = {
   status: "open" | "closed";
 };
 
+function toPredictionValue(fixture: PredictionFixture): PredictionScoreValue {
+  return {
+    homeScore: fixture.predictedHomeScore === null || fixture.predictedHomeScore === undefined ? "" : String(fixture.predictedHomeScore),
+    awayScore: fixture.predictedAwayScore === null || fixture.predictedAwayScore === undefined ? "" : String(fixture.predictedAwayScore),
+  };
+}
+
+function isComplete(prediction: PredictionScoreValue): boolean {
+  return prediction.homeScore !== "" && prediction.awayScore !== "";
+}
+
 export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, locale, copy }: PredictionsBoardProps) {
   const initialSelections = useMemo(
-    () => Object.fromEntries(fixtures.map((fixture) => [fixture.id, fixture.predictedWinnerCode ?? ""])),
+    () => Object.fromEntries(fixtures.map((fixture) => [fixture.id, toPredictionValue(fixture)])),
     [fixtures],
   );
-  const [selectedByMatchId, setSelectedByMatchId] = useState<Record<string, string>>(initialSelections);
-  const [savedByMatchId, setSavedByMatchId] = useState<Record<string, string>>(initialSelections);
+  const [selectedByMatchId, setSelectedByMatchId] = useState<Record<string, PredictionScoreValue>>(initialSelections);
+  const [savedByMatchId, setSavedByMatchId] = useState<Record<string, PredictionScoreValue>>(initialSelections);
   const [forcedClosedMatchIds, setForcedClosedMatchIds] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,15 +58,15 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
     [fixtures, forcedClosedSet, groupDeadline],
   );
   const dirtyFixtures = fixturesWithStatus.filter(({ fixture, status }) => {
-    const selectedWinnerCode = selectedByMatchId[fixture.id] ?? "";
-    const savedWinnerCode = savedByMatchId[fixture.id] ?? "";
+    const selectedPrediction = selectedByMatchId[fixture.id] ?? toPredictionValue(fixture);
+    const savedPrediction = savedByMatchId[fixture.id] ?? toPredictionValue(fixture);
 
-    return status === "open" && Boolean(selectedWinnerCode) && selectedWinnerCode !== savedWinnerCode;
+    return status === "open" && isComplete(selectedPrediction) && (selectedPrediction.homeScore !== savedPrediction.homeScore || selectedPrediction.awayScore !== savedPrediction.awayScore);
   });
   const openMatchesCount = fixturesWithStatus.filter(({ status }) => status === "open").length;
   const unsavedChangesCount = dirtyFixtures.length;
   const hasUnsavedChanges = dirtyFixtures.length > 0;
-  const savedPredictionCount = Object.values(savedByMatchId).filter(Boolean).length;
+  const savedPredictionCount = Object.values(savedByMatchId).filter((prediction) => isComplete(prediction)).length;
   const helperText = hasUnsavedChanges ? copy.pendingChanges : savedPredictionCount > 0 ? copy.allChangesSaved : copy.bulkSelectionHint;
   const noticeToneClass = notice === copy.notices.saved
     ? "border border-emerald-400/20 bg-emerald-400/10 text-emerald-50"
@@ -91,7 +102,8 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
         JSON.stringify(
           dirtyFixtures.map(({ fixture }) => ({
             matchId: fixture.id,
-            predictedWinnerCode: selectedByMatchId[fixture.id],
+            homeScore: selectedByMatchId[fixture.id]?.homeScore ?? "",
+            awayScore: selectedByMatchId[fixture.id]?.awayScore ?? "",
           })),
         ),
       );
@@ -110,7 +122,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
         const nextSavedByMatchId = { ...savedByMatchId };
 
         (data.savedMatchIds ?? dirtyFixtures.map(({ fixture }) => fixture.id)).forEach((matchId) => {
-          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? "";
+          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
         });
 
         setSavedByMatchId(nextSavedByMatchId);
@@ -120,11 +132,11 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
         const nextSelectedByMatchId = { ...selectedByMatchId };
 
         (data.savedMatchIds ?? []).forEach((matchId) => {
-          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? "";
+          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
         });
 
         (data.closedMatchIds ?? []).forEach((matchId) => {
-          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? "";
+          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
         });
 
         setSavedByMatchId(nextSavedByMatchId);
@@ -135,7 +147,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
         const nextSelectedByMatchId = { ...selectedByMatchId };
 
         (data.closedMatchIds ?? dirtyFixtures.map(({ fixture }) => fixture.id)).forEach((matchId) => {
-          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? "";
+          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
         });
 
         setSelectedByMatchId(nextSelectedByMatchId);
@@ -202,17 +214,21 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
           key={fixture.id}
           copy={copy}
           fixture={fixture}
+          isSaving={isSaving}
           locale={locale}
-          savedWinnerCode={savedByMatchId[fixture.id] ?? ""}
-          selectedWinnerCode={selectedByMatchId[fixture.id] ?? ""}
+          savedPrediction={savedByMatchId[fixture.id] ?? { homeScore: "", awayScore: "" }}
+          selectedPrediction={selectedByMatchId[fixture.id] ?? { homeScore: "", awayScore: "" }}
           status={status}
-          onSelect={(winnerCode) => {
+          onChange={(field, value) => {
             if (status !== "open" || isSaving) {
               return;
             }
             setSelectedByMatchId((current) => ({
               ...current,
-              [fixture.id]: winnerCode,
+              [fixture.id]: {
+                ...(current[fixture.id] ?? { homeScore: "", awayScore: "" }),
+                [field]: value,
+              },
             }));
           }}
         />

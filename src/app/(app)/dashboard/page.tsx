@@ -57,7 +57,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <p className="muted-copy mt-4 max-w-2xl text-base leading-7 sm:text-lg">
           {showEmptyState
             ? "Start by creating a group or joining one with a group ID."
-            : "Open your groups, check deadlines, and continue where you left off."}
+            : "Open your groups, check deadlines, and jump back into exact-score predictions."}
         </p>
       </div>
 
@@ -96,7 +96,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white">{group.name}</h3>
-                      <p className="muted-copy mt-2 text-sm leading-6">group_id: {group.group_id} · Deadline {formatDeadline(group.deadline)}</p>
+                      <p className="muted-copy mt-2 text-sm leading-6">group_id: {group.group_id} · Predictions close {formatDeadline(group.deadline)}</p>
                     </div>
                     <span className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-100">Open group</span>
                   </div>
@@ -108,14 +108,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <article className="rounded-[2rem] border border-white/10 bg-white/5 p-6 sm:p-8">
             <h2 className="text-2xl font-semibold text-white">Next actions</h2>
             <div className="mt-6 grid gap-4">
+              <Link className="rounded-[1.5rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href={`/groups?lang=${locale}`}>
+                Browse your groups
+              </Link>
               <Link className="rounded-[1.5rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href={`/create-group?lang=${locale}`}>
                 Create a new group
-              </Link>
-              <Link className="rounded-[1.5rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href={`/join-group?lang=${locale}`}>
-                Join a group by `group_id`
-              </Link>
-              <Link className="rounded-[1.5rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href={`/groups?lang=${locale}`}>
-                Browse group summaries
               </Link>
               <Link className="rounded-[1.5rem] border border-white/10 px-5 py-4 text-sm font-semibold text-white transition hover:border-sky-400/40 hover:bg-white/5" href={`/profile?lang=${locale}`}>
                 Open profile

@@ -9,7 +9,8 @@ export type PredictionFixture = {
   awayTeamName: string;
   awayTeamFlag: string;
   venue: string;
-  predictedWinnerCode?: string | null;
+  predictedHomeScore?: number | null;
+  predictedAwayScore?: number | null;
 };
 
 export function formatFixtureKickoff(value: string, locale: string) {
