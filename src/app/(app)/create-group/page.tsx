@@ -92,12 +92,14 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
   const scoringSummary = formatScoringRuleSummary(values, locale);
   const dashboardHref = `/dashboard?lang=${locale}`;
   const groupsHref = `/groups?lang=${locale}`;
+  const currentFlowHref = `/create-group?${buildFlowQuery({ lang: locale, step, ...values })}`;
   const setupHref = `/create-group?${buildFlowQuery({ lang: locale, step: "setup", ...values })}`;
   const reviewHref = `/create-group?${buildFlowQuery({ lang: locale, step: "review", ...values })}`;
   const discardHref = `/create-group?${buildFlowQuery({ lang: locale, step, discard: "1", ...values })}`;
 
   return (
-    <section className="page-grid">
+    <section className="page-grid relative">
+      <div aria-hidden={showDiscard} className={showDiscard ? "pointer-events-none select-none blur-[1px]" : ""}>
       <div>
         <p className="section-label">{copy.sectionLabel}</p>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -357,6 +359,38 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
           {copy.actions.browseGroups}
         </Link>
       </div>
+      </div>
+
+      {showDiscard ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 backdrop-blur-sm">
+          <article
+            aria-describedby="create-group-discard-description"
+            aria-labelledby="create-group-discard-title"
+            aria-modal="true"
+            className="w-full max-w-2xl rounded-[1.75rem] border border-rose-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.55)] sm:p-6"
+            role="dialog"
+          >
+            <h2 className="text-2xl font-semibold text-white" id="create-group-discard-title">{copy.discard.title}</h2>
+            <p className="muted-copy mt-3 text-sm leading-7 sm:text-base" id="create-group-discard-description">
+              {copy.discard.description}
+            </p>
+            <div className="mt-5 grid gap-3 text-sm leading-7 sm:grid-cols-2 sm:text-base">
+              <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.basics.nameLabel}: {values.name || copy.review.missingName}</div>
+              <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.timing.deadlineLabel}: {values.deadline}</div>
+              <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.limits.maxPlayersLabel}: {values.maxPlayers} {copy.limits.maxPlayersSuffix}</div>
+              <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.review.rulesLabel}: {scoringSummary}</div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={currentFlowHref}>
+                {copy.discard.keepEditing}
+              </Link>
+              <Link className="rounded-full bg-rose-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-rose-200" href={dashboardHref}>
+                {copy.discard.confirm}
+              </Link>
+            </div>
+          </article>
+        </div>
+      ) : null}
     </section>
   );
 }

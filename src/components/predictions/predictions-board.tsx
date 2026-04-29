@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { getFixtureStatus, type PredictionFixture } from "@/lib/predictions/fixtures";
+import { formatFixtureKickoff, getFixtureStatus, type PredictionFixture } from "@/lib/predictions/fixtures";
 
 import { PredictionMatchCard, type PredictionMatchCardCopy, type PredictionScoreValue } from "./prediction-match-card";
 
@@ -79,7 +79,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
           : "";
 
   function handleResetChanges() {
-    setSelectedByMatchId(savedByMatchId);
+    setSelectedByMatchId({ ...savedByMatchId });
     setNotice(null);
   }
 
@@ -92,6 +92,15 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
     setNotice(null);
 
     try {
+      const submittedPredictionsByMatchId = Object.fromEntries(
+        dirtyFixtures.map(({ fixture }) => [
+          fixture.id,
+          {
+            homeScore: selectedByMatchId[fixture.id]?.homeScore ?? "",
+            awayScore: selectedByMatchId[fixture.id]?.awayScore ?? "",
+          },
+        ]),
+      ) as Record<string, PredictionScoreValue>;
       const formData = new FormData();
       if (groupId) {
         formData.set("groupId", groupId);
@@ -100,10 +109,10 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
       formData.set(
         "predictions",
         JSON.stringify(
-          dirtyFixtures.map(({ fixture }) => ({
-            matchId: fixture.id,
-            homeScore: selectedByMatchId[fixture.id]?.homeScore ?? "",
-            awayScore: selectedByMatchId[fixture.id]?.awayScore ?? "",
+          Object.entries(submittedPredictionsByMatchId).map(([matchId, prediction]) => ({
+            matchId,
+            homeScore: prediction.homeScore,
+            awayScore: prediction.awayScore,
           })),
         ),
       );
@@ -119,38 +128,64 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
       const data = (await response.json()) as SaveResponsePayload;
 
       if (data.status === "saved") {
-        const nextSavedByMatchId = { ...savedByMatchId };
+        const savedMatchIds = data.savedMatchIds ?? Object.keys(submittedPredictionsByMatchId);
 
-        (data.savedMatchIds ?? dirtyFixtures.map(({ fixture }) => fixture.id)).forEach((matchId) => {
-          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+        setSavedByMatchId((current) => {
+          const next = { ...current };
+
+          savedMatchIds.forEach((matchId) => {
+            next[matchId] = submittedPredictionsByMatchId[matchId] ?? current[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          return next;
         });
+        setSelectedByMatchId((current) => {
+          const next = { ...current };
 
-        setSavedByMatchId(nextSavedByMatchId);
+          savedMatchIds.forEach((matchId) => {
+            next[matchId] = submittedPredictionsByMatchId[matchId] ?? current[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          return next;
+        });
         setNotice(copy.notices.saved);
       } else if (data.status === "partial") {
-        const nextSavedByMatchId = { ...savedByMatchId };
-        const nextSelectedByMatchId = { ...selectedByMatchId };
+        const savedMatchIds = data.savedMatchIds ?? [];
 
-        (data.savedMatchIds ?? []).forEach((matchId) => {
-          nextSavedByMatchId[matchId] = selectedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+        setSavedByMatchId((current) => {
+          const next = { ...current };
+
+          savedMatchIds.forEach((matchId) => {
+            next[matchId] = submittedPredictionsByMatchId[matchId] ?? current[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          return next;
         });
+        setSelectedByMatchId((current) => {
+          const next = { ...current };
 
-        (data.closedMatchIds ?? []).forEach((matchId) => {
-          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+          savedMatchIds.forEach((matchId) => {
+            next[matchId] = submittedPredictionsByMatchId[matchId] ?? current[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          (data.closedMatchIds ?? []).forEach((matchId) => {
+            next[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          return next;
         });
-
-        setSavedByMatchId(nextSavedByMatchId);
-        setSelectedByMatchId(nextSelectedByMatchId);
         setForcedClosedMatchIds((current) => Array.from(new Set([...current, ...(data.closedMatchIds ?? [])])));
         setNotice(copy.notices.partial);
       } else if (data.status === "closed") {
-        const nextSelectedByMatchId = { ...selectedByMatchId };
+        setSelectedByMatchId((current) => {
+          const next = { ...current };
 
-        (data.closedMatchIds ?? dirtyFixtures.map(({ fixture }) => fixture.id)).forEach((matchId) => {
-          nextSelectedByMatchId[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+          (data.closedMatchIds ?? dirtyFixtures.map(({ fixture }) => fixture.id)).forEach((matchId) => {
+            next[matchId] = savedByMatchId[matchId] ?? { homeScore: "", awayScore: "" };
+          });
+
+          return next;
         });
-
-        setSelectedByMatchId(nextSelectedByMatchId);
         setForcedClosedMatchIds((current) => Array.from(new Set([...current, ...(data.closedMatchIds ?? [])])));
         setNotice(copy.notices.closed);
       } else if (data.status === "invalid") {
@@ -171,6 +206,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
         <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
           <h2 className="text-xl font-semibold text-white">{copy.summaryTitle}</h2>
           <div className="mt-4 grid gap-3 text-sm leading-7 sm:text-base">
+            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.groupDeadlineLabel}: {formatFixtureKickoff(groupDeadline, locale)}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.openMatchesLabel}: {openMatchesCount}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.savedPredictionsLabel}: {savedPredictionCount} / {fixtures.length}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.unsavedChangesLabel}: {unsavedChangesCount}</div>
@@ -188,6 +224,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
                 {hasUnsavedChanges ? copy.unsavedState : copy.savedState}
               </span>
               <button
+                aria-label={copy.resetChanges}
                 className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-400"
                 disabled={!hasUnsavedChanges || isSaving}
                 onClick={handleResetChanges}
@@ -196,6 +233,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
                 {copy.resetChanges}
               </button>
               <button
+                aria-label={copy.saveAllPicks}
                 className="rounded-full bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-200"
                 disabled={!hasUnsavedChanges || isSaving}
                 onClick={handleSaveAll}
@@ -205,7 +243,7 @@ export function PredictionsBoard({ fixtures, groupDeadline, groupId, groupSlug, 
               </button>
             </div>
           </div>
-          {notice ? <p className={`mt-4 rounded-[1.25rem] px-4 py-4 text-sm font-medium ${noticeToneClass}`}>{notice}</p> : null}
+          {notice ? <p aria-live="polite" className={`mt-4 rounded-[1.25rem] px-4 py-4 text-sm font-medium ${noticeToneClass}`} role="status">{notice}</p> : null}
         </article>
       </div>
 

@@ -11,6 +11,7 @@ export type PredictionScoreValue = {
 
 export type PredictionMatchCardCopy = {
   summaryTitle: string;
+  groupDeadlineLabel: string;
   openMatchesLabel: string;
   savedPredictionsLabel: string;
   kickoffLabel: string;

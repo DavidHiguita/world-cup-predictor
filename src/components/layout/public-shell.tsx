@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { type Locale, getCommonMessages } from "@/lib/i18n";
 
 type PublicShellProps = {
@@ -9,7 +11,6 @@ type PublicShellProps = {
 
 export function PublicShell({ children, locale }: PublicShellProps) {
   const messages = getCommonMessages(locale);
-  const alternateLocale = locale === "en" ? "es" : "en";
 
   return (
     <div className="app-shell flex min-h-screen flex-col px-4 py-6 sm:px-6 lg:px-8">
@@ -29,9 +30,9 @@ export function PublicShell({ children, locale }: PublicShellProps) {
             <Link className="rounded-full border border-white/10 px-4 py-2 hover:border-sky-400/40 hover:text-white" href={`/sign-in?lang=${locale}`}>
               {messages.nav.signIn}
             </Link>
-            <Link className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-white hover:border-emerald-300/40" href={`?lang=${alternateLocale}`}>
-              {messages.nav.language}: {alternateLocale.toUpperCase()}
-            </Link>
+            <Suspense fallback={null}>
+              <LanguageSwitcher className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-white hover:border-emerald-300/40" />
+            </Suspense>
           </nav>
         </div>
       </header>

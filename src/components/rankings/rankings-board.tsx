@@ -270,6 +270,7 @@ export function RankingsBoard({
                 {statusLabel}
               </span>
               <button
+                aria-label={isRefreshing ? copy.refreshingRankings : loadError ? copy.retryRefresh : copy.refreshNow}
                 className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:border-white/10 disabled:text-slate-400"
                 disabled={isRefreshing || isSyncing}
                 onClick={() => {
@@ -281,6 +282,7 @@ export function RankingsBoard({
               </button>
               {isOwner ? (
                 <button
+                  aria-label={isSyncing ? copy.syncingResults : copy.syncResults}
                   className="rounded-full bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-200"
                   disabled={isRefreshing || isSyncing || !canSyncResults}
                   onClick={handleSyncResults}
@@ -291,7 +293,7 @@ export function RankingsBoard({
               ) : null}
             </div>
           </div>
-          {notice ? <p className={`mt-4 rounded-[1.25rem] px-4 py-4 text-sm font-medium ${noticeToneClass}`}>{notice}</p> : null}
+          {notice ? <p aria-live="polite" className={`mt-4 rounded-[1.25rem] px-4 py-4 text-sm font-medium ${noticeToneClass}`} role="status">{notice}</p> : null}
         </article>
       </div>
 

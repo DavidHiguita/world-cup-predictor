@@ -4,7 +4,11 @@ import { seeOther } from "@/lib/http/redirects";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  const response = seeOther(new URL("/", request.url));
+  const formData = await request.formData();
+  const lang = String(formData.get("lang") ?? "en");
+  const redirectUrl = new URL("/", request.url);
+  redirectUrl.searchParams.set("lang", lang);
+  const response = seeOther(redirectUrl);
 
   const supabase = createSupabaseRouteHandlerClient({
     getAll() {

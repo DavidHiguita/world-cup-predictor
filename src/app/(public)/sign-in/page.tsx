@@ -20,6 +20,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
   const locale = resolveLocale(params?.lang);
   const messages = getCommonMessages(locale);
+  const authCopy = messages.auth;
   const redirectTo = getSafeRedirectPath(params?.redirectTo, DEFAULT_AUTHENTICATED_REDIRECT);
   const errorMessage =
     params?.error === "credentials"
@@ -38,16 +39,20 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             ? locale === "es"
               ? "No pudimos entrar con Google. Revisa la configuración o intenta de nuevo."
               : "We could not sign you in with Google. Check the setup or try again."
-            : params?.error === ACCOUNT_DELETION_PENDING_NOTICE
-              ? locale === "es"
-                ? "Esta cuenta tiene una eliminación pendiente y ya no puede acceder a la aplicación."
-                : "This account has a pending deletion request and can no longer access the application."
-            : null;
+            : params?.error === "reset"
+              ? authCopy.resetPasswordError
+              : params?.error === ACCOUNT_DELETION_PENDING_NOTICE
+                ? locale === "es"
+                  ? "Esta cuenta tiene una eliminación pendiente y ya no puede acceder a la aplicación."
+                  : "This account has a pending deletion request and can no longer access the application."
+                : null;
   const noticeMessage =
     params?.authNotice === "check-email"
       ? locale === "es"
         ? "Revisa tu correo para completar la creación de la cuenta."
         : "Check your email to complete account creation."
+      : params?.authNotice === "reset-email-sent"
+        ? authCopy.resetPasswordCheckEmailNotice
       : params?.authNotice === ACCOUNT_DELETION_PENDING_NOTICE
         ? locale === "es"
           ? "La cuenta fue marcada para eliminación, se excluyó de futuras comunicaciones y permanecerá en retención durante un mes."
@@ -83,9 +88,10 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 <div className="mt-5">
                   <Link
                     className="inline-flex rounded-full bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-300"
+                    aria-label={authCopy.googleAction}
                     href={`/auth/google?lang=${locale}&redirectTo=${encodeURIComponent(redirectTo)}`}
                   >
-                    {locale === "es" ? "Continuar con Google" : "Continue with Google"}
+                    {authCopy.googleAction}
                   </Link>
                 </div>
               </article>
@@ -108,46 +114,66 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                   <input name="redirectTo" type="hidden" value={redirectTo} />
 
                   <label className="grid gap-2 text-sm font-medium text-white">
-                    <span>{locale === "es" ? "Correo electrónico" : "Email"}</span>
+                    <span>{authCopy.emailLabel}</span>
                     <input
                       className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-sky-400/50"
+                      autoComplete="email"
                       name="email"
-                      placeholder={locale === "es" ? "tu@correo.com" : "you@example.com"}
+                      placeholder={authCopy.emailPlaceholder}
                       required
                       type="email"
                     />
                   </label>
 
                   <label className="grid gap-2 text-sm font-medium text-white">
-                    <span>{locale === "es" ? "Contraseña" : "Password"}</span>
+                    <span>{authCopy.passwordLabel}</span>
                     <input
+                      aria-describedby="sign-in-password-hint"
+                      autoComplete="current-password"
                       className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-sky-400/50"
                       minLength={6}
                       name="password"
-                      placeholder={locale === "es" ? "Mínimo 6 caracteres" : "Minimum 6 characters"}
+                      placeholder={authCopy.passwordPlaceholder}
                       required
                       type="password"
                     />
                   </label>
+                  <p className="muted-copy text-sm leading-6" id="sign-in-password-hint">
+                    {authCopy.passwordHint}
+                  </p>
 
                   <div className="flex flex-wrap gap-3">
                     <button
                       className="rounded-full bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      aria-label={authCopy.signInAction}
                       name="mode"
                       type="submit"
                       value="sign-in"
                     >
-                      {locale === "es" ? "Iniciar sesión" : "Sign in"}
+                      {authCopy.signInAction}
                     </button>
                     <button
                       className="rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5"
+                      aria-label={authCopy.createAccountAction}
                       name="mode"
                       type="submit"
                       value="sign-up"
                     >
-                      {locale === "es" ? "Crear cuenta" : "Create account"}
+                      {authCopy.createAccountAction}
+                    </button>
+                    <button
+                      className="rounded-full border border-sky-400/20 bg-sky-400/10 px-5 py-3 text-sm font-semibold text-sky-100 transition hover:border-sky-300/40 hover:bg-sky-400/15"
+                      formNoValidate
+                      name="mode"
+                      type="submit"
+                      value="reset-password-request"
+                    >
+                      {authCopy.forgotPasswordAction}
                     </button>
                   </div>
+                  <p className="muted-copy text-sm leading-6">
+                    {authCopy.forgotPasswordHint}
+                  </p>
                 </form>
               </article>
             </div>
@@ -159,13 +185,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               {messages.auth.inviteHint}
             </p>
             {errorMessage ? (
-              <div className="mt-6 rounded-[1.5rem] border border-rose-400/20 bg-rose-400/10 p-5 text-sm leading-7 text-rose-100">
+              <div aria-live="polite" className="mt-6 rounded-[1.5rem] border border-rose-400/20 bg-rose-400/10 p-5 text-sm leading-7 text-rose-100" role="alert">
                 <p>{errorMessage}</p>
                 {params?.detail ? <p className="mt-2 text-rose-200/90">{params.detail}</p> : null}
               </div>
             ) : null}
             {noticeMessage ? (
-              <div className="mt-6 rounded-[1.5rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50">
+              <div aria-live="polite" className="mt-6 rounded-[1.5rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-7 text-amber-50" role="status">
                 <p>{noticeMessage}</p>
               </div>
             ) : null}

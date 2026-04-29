@@ -27,7 +27,8 @@ alter table public.groups
   check (exact_score_points >= correct_outcome_points);
 
 drop function if exists public.create_group_with_owner(text, text, text, text, text, timestamptz, integer, text);
-create function public.create_group_with_owner(
+drop function if exists public.create_group_with_owner(text, text, text, text, text, timestamptz, integer, text, integer, integer);
+create or replace function public.create_group_with_owner(
   group_slug text,
   group_identifier text,
   group_share_code text,

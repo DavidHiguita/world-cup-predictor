@@ -36,7 +36,34 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  if (!email || !password) {
+  if (!email) {
+    return seeOther(buildErrorUrl(request, lang, mode === "reset-password-request" ? "reset" : "credentials", redirectTo));
+  }
+
+  if (mode === "reset-password-request") {
+    const callbackUrl = new URL("/auth/callback", request.url);
+    callbackUrl.searchParams.set("lang", lang);
+    callbackUrl.searchParams.set(
+      "redirectTo",
+      `/reset-password?lang=${encodeURIComponent(lang)}&redirectTo=${encodeURIComponent(redirectTo)}`,
+    );
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: callbackUrl.toString(),
+    });
+
+    if (error) {
+      return seeOther(buildErrorUrl(request, lang, "reset", redirectTo, error.message));
+    }
+
+    const redirectUrl = new URL("/sign-in", request.url);
+    redirectUrl.searchParams.set("lang", lang);
+    redirectUrl.searchParams.set("authNotice", "reset-email-sent");
+    redirectUrl.searchParams.set("redirectTo", redirectTo);
+    return seeOther(redirectUrl);
+  }
+
+  if (!password) {
     return seeOther(buildErrorUrl(request, lang, "credentials", redirectTo));
   }
 
