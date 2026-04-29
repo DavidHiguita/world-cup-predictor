@@ -125,7 +125,10 @@ export const commonMessages = {
       maxPlayersLabel: "Maximum players",
       maxPlayersSuffix: "players",
       scoringLabel: "Scoring",
-      scoringSummary: "Exact-score scoring is applied by default. Exact score = 3 points. Correct outcome = 1 point.",
+      scoringSummary: "Set the points for an exact-score hit and a correct outcome.",
+      exactScorePointsLabel: "Exact-score points",
+      correctOutcomePointsLabel: "Correct-outcome points",
+      scoringHint: "These scoring settings are locked after the group is created.",
       presets: {
         small: "12 players",
         medium: "24 players",
@@ -137,6 +140,7 @@ export const commonMessages = {
       missingName: "Missing group name",
       rulesLabel: "Rules",
       scoringEnabled: "Exact-score scoring: enabled by default",
+      scoringLocked: "Scoring will lock after the group is created.",
       validationTitle: "Validation needed before create",
     },
     discard: {
@@ -181,6 +185,7 @@ export const commonMessages = {
         "Keep the group context visible, understand the current status quickly, and move into the next meaningful action with confidence.",
       groupSummaryTitle: "Group summary",
       rulesSummary: "Rules: Exact score = 3 points · Correct outcome = 1 point",
+      rulesSummaryPrefix: "Rules",
       membersPrefix: "Members",
       shareLinkActive: "Share link active",
       nextDeadlineLabel: "Next deadline",

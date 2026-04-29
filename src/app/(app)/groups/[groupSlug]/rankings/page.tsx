@@ -29,6 +29,10 @@ type RankingsSnapshot = {
   podium: GroupRankingRow[];
   resolvedMatches: number;
   lastUpdated: string | null;
+  scoring: {
+    exactScorePoints: number;
+    correctOutcomePoints: number;
+  };
   fetchedAt: string;
 };
 
@@ -54,6 +58,10 @@ export default async function GroupRankingsPage({ params, searchParams }: Rankin
     podium: [],
     resolvedMatches: 0,
     lastUpdated: null,
+    scoring: {
+      exactScorePoints: 3,
+      correctOutcomePoints: 1,
+    },
     fetchedAt: new Date().toISOString(),
   };
   const supabase = await createSupabaseServerClient();
@@ -99,6 +107,7 @@ export default async function GroupRankingsPage({ params, searchParams }: Rankin
           podium: rankingData.podium,
           resolvedMatches: rankingData.resolvedMatches,
           lastUpdated: rankingData.lastUpdated,
+          scoring: rankingData.scoring,
           fetchedAt: new Date().toISOString(),
         };
       } catch {

@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/admin";
-import { getPredictionPoints, isExactScoreHit } from "@/lib/predictions/scoring";
+import { DEFAULT_GROUP_SCORING_SETTINGS, getPredictionPoints, isExactScoreHit, type GroupScoringSettings } from "@/lib/predictions/scoring";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -13,6 +13,8 @@ type GroupRankingRpcRow = {
   rank: number;
   resolved_matches: number;
   last_updated: string | null;
+  exact_score_points: number;
+  correct_outcome_points: number;
 };
 
 export type GroupRankingRow = {
@@ -34,6 +36,12 @@ export type GroupRankingsResult = {
   resolvedMatches: number;
   lastUpdated: string | null;
   currentUserRow: GroupRankingRow | null;
+  scoring: GroupScoringSettings;
+};
+
+type GroupScoringRow = {
+  exact_score_points: number;
+  correct_outcome_points: number;
 };
 
 type GroupMembershipRow = {
@@ -70,6 +78,12 @@ function mapRows(data: GroupRankingRpcRow[] | null, currentUserId: string): Grou
     isCurrentUser: row.user_id === currentUserId,
     shortCode: row.user_id.replace(/-/g, "").slice(0, 4).toUpperCase(),
   }));
+  const scoring = data?.[0]
+    ? {
+        exactScorePoints: data[0].exact_score_points,
+        correctOutcomePoints: data[0].correct_outcome_points,
+      }
+    : DEFAULT_GROUP_SCORING_SETTINGS;
 
   return {
     rows,
@@ -77,14 +91,16 @@ function mapRows(data: GroupRankingRpcRow[] | null, currentUserId: string): Grou
     resolvedMatches: rows[0]?.resolvedMatches ?? 0,
     lastUpdated: rows[0]?.lastUpdated ?? null,
     currentUserRow: rows.find((row) => row.isCurrentUser) ?? null,
+    scoring,
   };
 }
 
 async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string): Promise<GroupRankingsResult> {
   const admin = createSupabaseAdminClient();
-  const [{ data: membershipsData, error: membershipsError }, { data: resolvedMatchesData, error: matchesError }] = await Promise.all([
+  const [{ data: membershipsData, error: membershipsError }, { data: resolvedMatchesData, error: matchesError }, { data: groupData, error: groupError }] = await Promise.all([
     admin.from("group_memberships").select("user_id, role").eq("group_id", groupId),
     admin.from("matches").select("id, home_team_code, away_team_code, home_score, away_score, resolved_at").eq("result_status", "final").not("home_score", "is", null).not("away_score", "is", null),
+    admin.from("groups").select("exact_score_points, correct_outcome_points").eq("id", groupId).maybeSingle(),
   ]);
 
   if (membershipsError) {
@@ -95,8 +111,18 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
     throw matchesError;
   }
 
+  if (groupError) {
+    throw groupError;
+  }
+
   const memberships = (membershipsData as GroupMembershipRow[] | null) ?? [];
   const resolvedMatches = (resolvedMatchesData as ResolvedMatchRow[] | null) ?? [];
+  const scoring = groupData
+    ? {
+        exactScorePoints: (groupData as GroupScoringRow).exact_score_points,
+        correctOutcomePoints: (groupData as GroupScoringRow).correct_outcome_points,
+      }
+    : DEFAULT_GROUP_SCORING_SETTINGS;
   const resolvedMatchIds = resolvedMatches.map((match) => match.id);
   const resolvedMatchesById = new Map(resolvedMatches.map((match) => [match.id, match]));
   const lastUpdated = resolvedMatches.reduce<string | null>((latest, match) => {
@@ -158,6 +184,7 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
           },
           resolvedMatch.home_team_code,
           resolvedMatch.away_team_code,
+          scoring,
         );
 
         if (
@@ -227,6 +254,7 @@ async function getGroupRankingsFromAdmin(groupId: string, currentUserId: string)
     resolvedMatches: resolvedMatches.length,
     lastUpdated,
     currentUserRow: rows.find((row) => row.isCurrentUser) ?? null,
+    scoring,
   };
 }
 

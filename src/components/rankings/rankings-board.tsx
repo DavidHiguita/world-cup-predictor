@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type Locale } from "@/lib/i18n";
 import { formatFixtureKickoff } from "@/lib/predictions/fixtures";
+import { formatScoringRuleSummary, type GroupScoringSettings } from "@/lib/predictions/scoring";
 import { type GroupRankingRow } from "@/lib/rankings/group-rankings";
 
 type RankingsBoardCopy = {
   summaryTitle: string;
   liveStatusTitle: string;
   scoringRuleLabel: string;
-  scoringRuleValue: string;
   resolvedMatchesLabel: string;
   lastUpdatedLabel: string;
   lastCheckedLabel: string;
@@ -52,6 +52,7 @@ type RankingsSnapshot = {
   podium: GroupRankingRow[];
   resolvedMatches: number;
   lastUpdated: string | null;
+  scoring: GroupScoringSettings;
   fetchedAt: string;
 };
 
@@ -113,6 +114,7 @@ export function RankingsBoard({
   const [podium, setPodium] = useState(initialData.podium);
   const [resolvedMatches, setResolvedMatches] = useState(initialData.resolvedMatches);
   const [lastUpdated, setLastUpdated] = useState(initialData.lastUpdated);
+  const [scoring, setScoring] = useState(initialData.scoring);
   const [lastCheckedAt, setLastCheckedAt] = useState(initialData.fetchedAt);
   const [currentTimestamp, setCurrentTimestamp] = useState(() => new Date(initialData.fetchedAt).getTime());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -145,6 +147,7 @@ export function RankingsBoard({
     setPodium(snapshot.podium);
     setResolvedMatches(snapshot.resolvedMatches);
     setLastUpdated(snapshot.lastUpdated);
+    setScoring(snapshot.scoring);
     setLastCheckedAt(snapshot.fetchedAt);
     setCurrentTimestamp(new Date(snapshot.fetchedAt).getTime());
     setLoadError(false);
@@ -249,7 +252,7 @@ export function RankingsBoard({
         <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
           <h2 className="text-xl font-semibold text-white">{copy.summaryTitle}</h2>
           <div className="mt-4 grid gap-3 text-sm leading-7 sm:text-base">
-            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.scoringRuleLabel}: {copy.scoringRuleValue}</div>
+            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.scoringRuleLabel}: {formatScoringRuleSummary(scoring, locale)}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.resolvedMatchesLabel}: {resolvedMatches}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.lastUpdatedLabel}: {lastUpdated ? formatFixtureKickoff(lastUpdated, locale) : copy.awaitingResults}</div>
           </div>

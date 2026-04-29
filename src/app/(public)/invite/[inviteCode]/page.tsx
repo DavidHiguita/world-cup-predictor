@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PublicShell } from "@/components/layout/public-shell";
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
 import { mapGroupJoinPreviewRow, type GroupJoinPreview } from "@/lib/groups/join-group";
+import { formatScoringRuleSummary } from "@/lib/predictions/scoring";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type InvitePageProps = {
@@ -23,6 +24,8 @@ type GroupJoinPreviewRow = {
   rules: string;
   deadline: string;
   max_players: number;
+  exact_score_points: number;
+  correct_outcome_points: number;
   member_count: number;
   join_state: string;
 };
@@ -73,7 +76,7 @@ export default async function InvitePage({ params, searchParams }: InvitePagePro
             {preview ? (
               <div className="mt-6 grid gap-3 text-sm leading-7 sm:text-base">
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">{copy.inviteCodeLabel}: {routeParams.inviteCode}</div>
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">{copy.rulesLabel}: {preview.rules}</div>
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">{copy.rulesLabel}: {formatScoringRuleSummary({ exactScorePoints: preview.exactScorePoints, correctOutcomePoints: preview.correctOutcomePoints }, locale)}</div>
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">{copy.membersLabel}: {preview.memberCount} / {preview.maxPlayers}</div>
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 px-4 py-4 text-slate-100">{copy.deadlineLabel}: {formatDeadline(preview.deadline)}</div>
               </div>

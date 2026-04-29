@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
+import { formatScoringRuleSummary } from "@/lib/predictions/scoring";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type GroupDetailsRow = {
@@ -12,6 +13,8 @@ type GroupDetailsRow = {
   slug: string;
   deadline: string;
   max_players: number;
+  exact_score_points: number;
+  correct_outcome_points: number;
 };
 
 type GroupDetailsPageProps = {
@@ -56,12 +59,12 @@ export default async function GroupDetailsPage({ params, searchParams }: GroupDe
   }
 
   if (query?.groupId) {
-    const { data } = await supabase.from("groups").select("id, group_id, share_code, name, slug, deadline, max_players").eq("group_id", query.groupId).maybeSingle();
+    const { data } = await supabase.from("groups").select("id, group_id, share_code, name, slug, deadline, max_players, exact_score_points, correct_outcome_points").eq("group_id", query.groupId).maybeSingle();
     group = (data as GroupDetailsRow | null) ?? null;
   }
 
   if (!group) {
-    const { data } = await supabase.from("groups").select("id, group_id, share_code, name, slug, deadline, max_players").eq("slug", routeParams.groupSlug).maybeSingle();
+    const { data } = await supabase.from("groups").select("id, group_id, share_code, name, slug, deadline, max_players, exact_score_points, correct_outcome_points").eq("slug", routeParams.groupSlug).maybeSingle();
     group = (data as GroupDetailsRow | null) ?? null;
   }
 
@@ -89,6 +92,10 @@ export default async function GroupDetailsPage({ params, searchParams }: GroupDe
   const rankingsHref = `/groups/${routeParams.groupSlug}/rankings?${rankingsParams.toString()}`;
   const memberCountLabel = `${memberCount} / ${group.max_players}`;
   const deadline = formatDeadline(group.deadline ?? (query?.deadline ? decodeURIComponent(query.deadline) : new Date().toISOString()));
+  const scoringSummary = formatScoringRuleSummary({
+    exactScorePoints: group.exact_score_points,
+    correctOutcomePoints: group.correct_outcome_points,
+  }, locale);
 
   return (
     <section className="page-grid">
@@ -114,7 +121,7 @@ export default async function GroupDetailsPage({ params, searchParams }: GroupDe
           <h2 className="text-xl font-semibold text-white">{copy.groupSummaryTitle}</h2>
           <div className="mt-4 grid gap-3 text-sm leading-7 sm:text-base">
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">group_id: {groupId}</div>
-            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.rulesSummary}</div>
+            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.rulesSummaryPrefix}: {scoringSummary}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.membersPrefix}: {memberCountLabel} · {copy.shareLinkActive}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.nextDeadlineLabel}: {deadline}</div>
           </div>

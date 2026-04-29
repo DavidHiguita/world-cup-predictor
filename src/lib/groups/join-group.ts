@@ -7,6 +7,8 @@ export type GroupJoinPreview = {
   rules: string;
   deadline: string;
   maxPlayers: number;
+  exactScorePoints: number;
+  correctOutcomePoints: number;
   memberCount: number;
   joinState: "open" | "joined" | "full";
 };
@@ -22,6 +24,8 @@ export function mapGroupJoinPreviewRow(data: {
   rules: string;
   deadline: string;
   max_players: number;
+  exact_score_points: number;
+  correct_outcome_points: number;
   member_count: number;
   join_state: string;
 }): GroupJoinPreview {
@@ -34,6 +38,8 @@ export function mapGroupJoinPreviewRow(data: {
     rules: data.rules,
     deadline: data.deadline,
     maxPlayers: data.max_players,
+    exactScorePoints: data.exact_score_points,
+    correctOutcomePoints: data.correct_outcome_points,
     memberCount: data.member_count,
     joinState: data.join_state === "joined" || data.join_state === "full" ? data.join_state : "open",
   };

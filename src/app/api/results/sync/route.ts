@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
           podium: rankingData.podium,
           resolvedMatches: rankingData.resolvedMatches,
           lastUpdated: rankingData.lastUpdated,
+          scoring: rankingData.scoring,
           fetchedAt: new Date().toISOString(),
         },
       }),

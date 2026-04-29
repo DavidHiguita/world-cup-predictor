@@ -12,6 +12,7 @@ import {
 } from "@/lib/groups/create-group";
 import { resolveCreateGroupSubmitError } from "@/lib/groups/create-group-submit";
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
+import { formatScoringRuleSummary } from "@/lib/predictions/scoring";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type CreateGroupPageProps = {
@@ -21,9 +22,10 @@ type CreateGroupPageProps = {
     discard?: string;
     error?: string;
     name?: string;
-    rules?: string;
     deadline?: string;
     maxPlayers?: string;
+    exactScorePoints?: string;
+    correctOutcomePoints?: string;
   }>;
 };
 
@@ -31,9 +33,10 @@ function buildFlowQuery(params: {
   lang: string;
   step?: string;
   name: string;
-  rules: string;
   deadline: string;
   maxPlayers: number;
+  exactScorePoints: number;
+  correctOutcomePoints: number;
   discard?: string;
 }) {
   const searchParams = new URLSearchParams();
@@ -48,9 +51,10 @@ function buildFlowQuery(params: {
   }
 
   searchParams.set("name", params.name);
-  searchParams.set("rules", params.rules);
   searchParams.set("deadline", params.deadline);
   searchParams.set("maxPlayers", String(params.maxPlayers));
+  searchParams.set("exactScorePoints", String(params.exactScorePoints));
+  searchParams.set("correctOutcomePoints", String(params.correctOutcomePoints));
 
   return searchParams.toString();
 }
@@ -72,9 +76,10 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
   const step = resolveCreateGroupStep(params?.step);
   const values = getCreateGroupValuesFromSearchParams({
     name: params?.name,
-    rules: params?.rules,
     deadline: params?.deadline,
     maxPlayers: params?.maxPlayers,
+    exactScorePoints: params?.exactScorePoints,
+    correctOutcomePoints: params?.correctOutcomePoints,
   });
   const validation = getCreateGroupValidation(values);
   const artifacts = createGroupArtifacts({
@@ -84,6 +89,7 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
   const currentStepIndex = getCreateGroupStepIndex(step);
   const showDiscard = params?.discard === "1";
   const submitError = resolveCreateGroupSubmitError(params?.error);
+  const scoringSummary = formatScoringRuleSummary(values, locale);
   const dashboardHref = `/dashboard?lang=${locale}`;
   const groupsHref = `/groups?lang=${locale}`;
   const setupHref = `/create-group?${buildFlowQuery({ lang: locale, step: "setup", ...values })}`;
@@ -137,7 +143,7 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
           </div>
 
           <div className="mt-6 grid gap-3 text-sm leading-7 sm:text-base">
-            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.basics.rulesLabel}: {values.rules}</div>
+            <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.basics.rulesLabel}: {scoringSummary}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.limits.maxPlayersLabel}: {values.maxPlayers} {copy.limits.maxPlayersSuffix}</div>
             <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.timing.deadlineLabel}: {values.deadline}</div>
           </div>
@@ -150,7 +156,6 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
               <form action="/create-group" className="mt-4 grid gap-4" method="get">
                 <input name="lang" type="hidden" value={locale} />
                 <input name="step" type="hidden" value="review" />
-                <input name="rules" type="hidden" value={values.rules} />
                 <label className="grid gap-2 text-sm font-semibold text-white">
                   <span>{copy.basics.nameLabel}</span>
                   <input
@@ -163,13 +168,13 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
                   />
                 </label>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Office Predictor Cup", rules: values.rules, deadline: values.deadline, maxPlayers: values.maxPlayers })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Office Predictor Cup", deadline: values.deadline, maxPlayers: values.maxPlayers, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.basics.presets.office}
                   </Link>
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Family World Cup Pool", rules: values.rules, deadline: values.deadline, maxPlayers: values.maxPlayers })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Family World Cup Pool", deadline: values.deadline, maxPlayers: values.maxPlayers, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.basics.presets.family}
                   </Link>
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Friends Knockout Race", rules: values.rules, deadline: values.deadline, maxPlayers: values.maxPlayers })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: "Friends Knockout Race", deadline: values.deadline, maxPlayers: values.maxPlayers, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.basics.presets.friends}
                   </Link>
                 </div>
@@ -185,10 +190,10 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
                   <span className="muted-copy text-xs leading-6">{copy.timing.helper}</span>
                 </label>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, rules: values.rules, deadline: "2026-06-11T18:00", maxPlayers: values.maxPlayers })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, deadline: "2026-06-11T18:00", maxPlayers: values.maxPlayers, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.timing.presets.first}
                   </Link>
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, rules: values.rules, deadline: "2026-06-12T12:00", maxPlayers: values.maxPlayers })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, deadline: "2026-06-12T12:00", maxPlayers: values.maxPlayers, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.timing.presets.second}
                   </Link>
                 </div>
@@ -205,19 +210,46 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
                   />
                 </label>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, rules: values.rules, deadline: values.deadline, maxPlayers: 12 })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, deadline: values.deadline, maxPlayers: 12, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.limits.presets.small}
                   </Link>
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, rules: values.rules, deadline: values.deadline, maxPlayers: 24 })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, deadline: values.deadline, maxPlayers: 24, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.limits.presets.medium}
                   </Link>
-                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, rules: values.rules, deadline: values.deadline, maxPlayers: 50 })}`}>
+                  <Link className="rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5" href={`/create-group?${buildFlowQuery({ lang: locale, step: "setup", name: values.name, deadline: values.deadline, maxPlayers: 50, exactScorePoints: values.exactScorePoints, correctOutcomePoints: values.correctOutcomePoints })}`}>
                     {copy.limits.presets.large}
                   </Link>
                 </div>
                 <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">
                   <p className="text-sm font-semibold text-white">{copy.limits.scoringLabel}</p>
                   <p className="muted-copy mt-2 text-sm leading-6">{copy.limits.scoringSummary}</p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <label className="grid gap-2 text-sm font-semibold text-white">
+                      <span>{copy.limits.exactScorePointsLabel}</span>
+                      <input
+                        className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/50"
+                        defaultValue={String(values.exactScorePoints)}
+                        max="10"
+                        min="1"
+                        name="exactScorePoints"
+                        required
+                        type="number"
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm font-semibold text-white">
+                      <span>{copy.limits.correctOutcomePointsLabel}</span>
+                      <input
+                        className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/50"
+                        defaultValue={String(values.correctOutcomePoints)}
+                        max="10"
+                        min="0"
+                        name="correctOutcomePoints"
+                        required
+                        type="number"
+                      />
+                    </label>
+                  </div>
+                  <p className="muted-copy mt-3 text-xs leading-6">{copy.limits.scoringHint}</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <button className="rounded-full bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-300" type="submit">
@@ -234,10 +266,10 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
               <h2 className="text-xl font-semibold text-white">{copy.review.title}</h2>
               <div className="mt-4 grid gap-3 text-sm leading-7 sm:text-base">
                 <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.basics.nameLabel}: {values.name || copy.review.missingName}</div>
-                <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.review.rulesLabel}: {values.rules}</div>
+                <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.review.rulesLabel}: {scoringSummary}</div>
                 <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.timing.deadlineLabel}: {values.deadline}</div>
                 <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.limits.maxPlayersLabel}: {values.maxPlayers}</div>
-                <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.review.scoringEnabled}</div>
+                <div className="rounded-[1.25rem] border border-white/10 px-4 py-4 text-slate-100">{copy.review.scoringLocked}</div>
               </div>
 
               {!validation.success ? (
@@ -271,9 +303,10 @@ export default async function CreateGroupPage({ searchParams }: CreateGroupPageP
                 <form action="/api/groups/create" className="contents" method="post">
                   <input name="lang" type="hidden" value={locale} />
                   <input name="name" type="hidden" value={values.name} />
-                  <input name="rules" type="hidden" value={values.rules} />
                   <input name="deadline" type="hidden" value={values.deadline} />
                   <input name="maxPlayers" type="hidden" value={String(values.maxPlayers)} />
+                  <input name="exactScorePoints" type="hidden" value={String(values.exactScorePoints)} />
+                  <input name="correctOutcomePoints" type="hidden" value={String(values.correctOutcomePoints)} />
                   <button className={`rounded-full px-5 py-3 text-sm font-semibold transition ${validation.success ? "bg-emerald-400 text-slate-950 hover:bg-emerald-300" : "cursor-not-allowed bg-slate-700 text-slate-300"}`} disabled={!validation.success} type="submit">
                     {copy.actions.create}
                   </button>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCommonMessages, resolveLocale } from "@/lib/i18n";
 import { mapGroupJoinPreviewRow, resolveJoinGroupStatus, type GroupJoinPreview } from "@/lib/groups/join-group";
+import { formatScoringRuleSummary } from "@/lib/predictions/scoring";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type JoinGroupPageProps = {
@@ -20,6 +21,8 @@ type GroupJoinPreviewRow = {
   rules: string;
   deadline: string;
   max_players: number;
+  exact_score_points: number;
+  correct_outcome_points: number;
   member_count: number;
   join_state: string;
 };
@@ -104,11 +107,11 @@ export default async function JoinGroupPage({ searchParams }: JoinGroupPageProps
       ? status
       : groupId && !preview
         ? "invalid"
-      : preview?.joinState === "full"
-        ? "full"
-        : preview?.joinState === "joined"
-          ? "joined"
-          : "idle";
+        : preview?.joinState === "full"
+          ? "full"
+          : preview?.joinState === "joined"
+            ? "joined"
+            : "idle";
   const presentation = getStatusPresentation(copy, effectiveStatus);
 
   return (
@@ -153,7 +156,7 @@ export default async function JoinGroupPage({ searchParams }: JoinGroupPageProps
           {preview ? (
             <div className="mt-6 grid gap-3 text-sm leading-7 sm:text-base">
               <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/20 px-4 py-4 text-slate-100">{preview.name}</div>
-              <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/20 px-4 py-4 text-slate-100">{copy.rulesLabel}: {preview.rules}</div>
+              <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/20 px-4 py-4 text-slate-100">{copy.rulesLabel}: {formatScoringRuleSummary({ exactScorePoints: preview.exactScorePoints, correctOutcomePoints: preview.correctOutcomePoints }, locale)}</div>
               <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/20 px-4 py-4 text-slate-100">{copy.membersLabel}: {preview.memberCount} / {preview.maxPlayers}</div>
               <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/20 px-4 py-4 text-slate-100">{copy.deadlineLabel}: {formatDeadline(preview.deadline)}</div>
             </div>

@@ -125,7 +125,10 @@ export const commonMessages = {
       maxPlayersLabel: "Máximo de jugadores",
       maxPlayersSuffix: "jugadores",
       scoringLabel: "Puntuación",
-      scoringSummary: "La puntuación por marcador exacto se aplica por defecto. Marcador exacto = 3 puntos. Resultado correcto = 1 punto.",
+      scoringSummary: "Define los puntos para un marcador exacto y para un resultado correcto.",
+      exactScorePointsLabel: "Puntos por marcador exacto",
+      correctOutcomePointsLabel: "Puntos por resultado correcto",
+      scoringHint: "Esta configuración de puntuación queda bloqueada después de crear el grupo.",
       presets: {
         small: "12 jugadores",
         medium: "24 jugadores",
@@ -137,6 +140,7 @@ export const commonMessages = {
       missingName: "Falta el nombre del grupo",
       rulesLabel: "Reglas",
       scoringEnabled: "Puntuación por marcador exacto: habilitada por defecto",
+      scoringLocked: "La puntuación quedará bloqueada después de crear el grupo.",
       validationTitle: "Se necesita validación antes de crear",
     },
     discard: {
@@ -181,6 +185,7 @@ export const commonMessages = {
         "Mantén visible el contexto del grupo, entiende rápido el estado actual y avanza con claridad al siguiente paso importante.",
       groupSummaryTitle: "Resumen del grupo",
       rulesSummary: "Reglas: marcador exacto = 3 puntos · resultado correcto = 1 punto",
+      rulesSummaryPrefix: "Reglas",
       membersPrefix: "Miembros",
       shareLinkActive: "Link para compartir activo",
       nextDeadlineLabel: "Próximo deadline",

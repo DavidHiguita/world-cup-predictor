@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createGroupArtifacts, createGroupFormSchema, DEFAULT_GROUP_RULES, EXACT_SCORE_SCORING_MODE } from "@/lib/groups/create-group";
+import { createGroupArtifacts, createGroupFormSchema, getCreateGroupRules, EXACT_SCORE_SCORING_MODE } from "@/lib/groups/create-group";
 import { seeOther } from "@/lib/http/redirects";
 import { copyResponseCookies } from "@/lib/http/response-cookies";
 import { getPendingAccountDeletionRequest } from "@/lib/profile/account-deletion";
@@ -14,6 +14,8 @@ type CreateGroupRpcResult = {
   name: string;
   deadline: string;
   max_players: number;
+  exact_score_points: number;
+  correct_outcome_points: number;
 };
 
 function buildReviewHref(requestUrl: URL, formData: FormData, error: string) {
@@ -23,9 +25,10 @@ function buildReviewHref(requestUrl: URL, formData: FormData, error: string) {
   params.set("lang", lang);
   params.set("step", "review");
   params.set("name", String(formData.get("name") ?? ""));
-  params.set("rules", String(formData.get("rules") ?? ""));
   params.set("deadline", String(formData.get("deadline") ?? ""));
   params.set("maxPlayers", String(formData.get("maxPlayers") ?? "24"));
+  params.set("exactScorePoints", String(formData.get("exactScorePoints") ?? "3"));
+  params.set("correctOutcomePoints", String(formData.get("correctOutcomePoints") ?? "1"));
   params.set("error", error);
 
   return new URL(`/create-group?${params.toString()}`, requestUrl);
@@ -60,10 +63,11 @@ export async function POST(request: NextRequest) {
 
   const parsed = createGroupFormSchema.safeParse({
     name: formData.get("name"),
-    rules: DEFAULT_GROUP_RULES,
     deadline: formData.get("deadline"),
     maxPlayers: formData.get("maxPlayers"),
     scoringMode: EXACT_SCORE_SCORING_MODE,
+    exactScorePoints: formData.get("exactScorePoints"),
+    correctOutcomePoints: formData.get("correctOutcomePoints"),
   });
 
   if (!parsed.success) {
@@ -72,16 +76,19 @@ export async function POST(request: NextRequest) {
 
   const values = parsed.data;
   const artifacts = createGroupArtifacts(values);
+  const rules = getCreateGroupRules(values);
 
   const { data, error } = await supabase.rpc("create_group_with_owner", {
     group_slug: artifacts.slug,
     group_identifier: artifacts.groupId,
     group_share_code: artifacts.shareCode,
     group_name: values.name,
-    group_rules: values.rules,
+    group_rules: rules,
     group_deadline: values.deadline,
     group_max_players: values.maxPlayers,
     group_scoring_mode: values.scoringMode,
+    group_exact_score_points: values.exactScorePoints,
+    group_correct_outcome_points: values.correctOutcomePoints,
   });
 
   if (error || !data) {
@@ -102,6 +109,8 @@ export async function POST(request: NextRequest) {
   createdParams.set("name", group.name);
   createdParams.set("deadline", group.deadline);
   createdParams.set("maxPlayers", String(group.max_players));
+  createdParams.set("exactScorePoints", String(group.exact_score_points));
+  createdParams.set("correctOutcomePoints", String(group.correct_outcome_points));
 
   return copyResponseCookies(response, seeOther(new URL(`/groups/${group.slug}?${createdParams.toString()}`, requestUrl)));
 }
